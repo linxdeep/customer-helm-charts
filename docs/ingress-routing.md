@@ -3,8 +3,8 @@
 The platform is served under a single domain (plus its wildcard subdomains).
 This document lists every route so you can configure any ingress controller.
 The chart can also generate a standard `networking.k8s.io/v1` Ingress for you
-(`ingress.enabled=true`) — but MQTT and STUN/TURN must always be exposed
-separately (see below).
+(`ingress.enabled=true`) — but MQTT must always be exposed separately (see
+below).
 
 All service names below are in the namespace where the chart is installed.
 
@@ -56,19 +56,32 @@ which needs a gRPC-capable controller.
 
 ## Non-HTTP traffic (no HTTP ingress)
 
-These endpoints must be reachable by devices directly, typically via
-LoadBalancer services:
+MQTT must be reachable by devices directly, typically via a LoadBalancer
+service:
 
 | Protocol / Port | Target | Purpose |
 |---|---|---|
 | TCP 1883 (`mqtt.tcpPort`) | EMQX | MQTT |
 | TLS 8883 (`mqtt.sslPort`) | EMQX | MQTT over TLS |
 | TCP/TLS 8083, 8084 | EMQX | MQTT over WebSocket(S) |
-| UDP/TCP 3478 | STUN server | remote control NAT traversal |
-| TCP 3479 (+ UDP relay range) | TURN server | remote control relay |
 
-Set `mqtt.external` to the public MQTT hostname. STUN/TURN servers are
-configured via `remoteProxy.stun` / `remoteProxy.turn`.
+Set `mqtt.external` to the public MQTT hostname (see
+[middleware-emqx.md](middleware-emqx.md) for an example LoadBalancer service).
+
+### Remote control NAT traversal (STUN/TURN)
+
+Do **not** run STUN/TURN inside Kubernetes: running them in containers behind
+load balancers/NAT yields unreliable ICE candidates (observed poor results in
+testing). Provide externally hosted STUN/TURN servers instead and reference
+them in the chart values:
+
+```yaml
+remoteProxy:
+  stun:
+    - "stun:stun.example.com:3478"
+  turn:
+    - turn: "turn:turn.example.com:3479"
+```
 
 ## Example: nginx ingress controller
 

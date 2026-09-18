@@ -75,8 +75,9 @@ The chart can generate a standard `networking.k8s.io/v1` Ingress
 (`ingress.enabled`), but routing is fully documented so you can also configure
 your own controller: [docs/ingress-routing.md](docs/ingress-routing.md).
 
-Note that MQTT (TCP 1883 / TLS 8883) and the remote-control STUN/TURN ports
-cannot go through an HTTP ingress and must be exposed separately.
+Note that MQTT (TCP 1883 / TLS 8883) cannot go through an HTTP ingress and
+must be exposed separately. Remote-control STUN/TURN servers must be hosted
+outside Kubernetes (see [docs/ingress-routing.md](docs/ingress-routing.md)).
 
 ## Upgrade notes
 

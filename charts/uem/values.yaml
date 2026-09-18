@@ -544,7 +544,9 @@ file:
 remoteProxy:
   enabled: true
   replicaCount: 1
-  # -- Public STUN/TURN servers used for remote control, e.g.
+  # -- Externally hosted STUN/TURN servers used for remote control.
+  # Do NOT point these at servers running inside Kubernetes: STUN/TURN in
+  # containers behind load balancers/NAT produces unreliable ICE candidates.
   # stun: ["stun:stun.example.com:3478"]
   # turn: [{ turn: "turn:turn.example.com:3479" }]
   stun: []

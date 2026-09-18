@@ -17,9 +17,16 @@
    https://{{ .Values.domain }}/files,/file,/dispatch -> file:80
    https://{{ .Values.domain }}/sse/rcw,/wss/rcw     -> remote-proxy:80
 
-   MQTT (tcp {{ .Values.mqtt.tcpPort }} / tls {{ .Values.mqtt.sslPort }}) and the
-   remote-control STUN/TURN ports must be exposed directly to devices (LoadBalancer
-   or NodePort), not through an HTTP ingress.
+   Remote control gRPC (must be routed separately, HTTP/2):
+   https://{{ .Values.domain }}/linxdeep.remote.proxy.v1.RemoteProxy
+       -> remote-proxy:9099 (h2c)
+   Enable it with ingress.grpc.enabled=true (requires a gRPC-capable
+   controller) or configure it on your own controller.
+
+   MQTT (tcp {{ .Values.mqtt.tcpPort }} / tls {{ .Values.mqtt.sslPort }}) must be
+   exposed directly to devices (LoadBalancer or NodePort), not through an HTTP
+   ingress. Remote-control STUN/TURN servers must be hosted OUTSIDE Kubernetes
+   and configured via remoteProxy.stun / remoteProxy.turn.
 
 3. Check pod status:
 
