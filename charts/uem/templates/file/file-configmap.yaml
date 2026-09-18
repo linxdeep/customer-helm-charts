@@ -1,0 +1,59 @@
+{{- if .Values.file.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{- include "uem.fileFullname" . }}
+  labels:
+    {{- include "uem.fileLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    log:
+      level: {{ .Values.file.logLevel }}
+      max: 5
+      limit: 10000000
+    mqtt:
+      id: zeroSecond
+      tcp: tcp://emqx:1883
+    database:
+      address: {{ .Values.db.address }}
+      keyspace: {{ .Values.db.keyspace }}
+      username: {{ .Values.db.username }}
+      password: {{ .Values.db.password }}
+    kafka:
+      brokers:
+        {{ .Values.kafka.brokerList | toYaml | nindent 8 }}
+      groupId: "fileserver"
+
+    redis:
+      addr: {{ .Values.redis.addr }}
+      readTimeout: "0.2s"
+      writeTimeout: "0.2s"
+      cluster: {{ .Values.redis.cluster }}
+    file:
+       # 主程序地址
+      api: http://devices
+      deviceStateApi: http://device-stats
+      # Api 风格： tenant, lb, header, 默认 tenant
+      apiStyle: header
+      tenantMode: shared
+      dispatchAttempts: 5
+      notificationWaitInterval: 1
+      cdn: {{- if .Values.s3.enabled}} s3{{- end}}
+      cdnDomain: {{- if .Values.s3.enabled}} {{ .Values.s3.domain }}{{- end}}
+      #外网访问地址
+      domain: https://{{ .Values.domain }}
+      leaderType: k8s
+    awsS3:
+      region: {{ .Values.s3.region }}
+      accessKey: {{ .Values.s3.accessKey }}
+      secretKey: {{ .Values.s3.secretKey }}
+      bucketName: {{ .Values.s3.bucketName }}
+      domain: {{ .Values.s3.domain }}
+    cron:
+      job:
+        - name: timeout_no_response_job
+          interval: 1m
+        - name: notice_device_execute_job
+          interval: 1m
+
+{{- end -}}

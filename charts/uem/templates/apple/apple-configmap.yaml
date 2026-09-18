@@ -1,0 +1,28 @@
+{{- if .Values.apple.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.appleFullname" . }}
+  labels:
+    {{- include "uem.appleLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    apple:
+      # 主程序地址
+      api: http://devices
+      # Api 风格： tenant, lb, header, 默认 tenant
+      apiStyle: header
+      leaderElection: "k8s"
+      # 对外暴露地址
+      # 内存模式，仅自测用，不依赖数据库，mqtt, 生成服必须设置为 false
+      memoryMode: false
+    http:
+      port: 9093
+      https: false
+      swagger: true
+      # 跨域地址
+      allowOrigin: "*"
+    log:
+      # 日志级别
+      level: {{ .Values.apple.logLevel }}
+{{- end -}}

@@ -1,0 +1,22 @@
+{{- if .Values.bff.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.bffFullname" . }}
+  labels:
+    {{- include "uem.bffLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    bff:
+      culture: {{ .Values.bff.culture }}
+      for: {{ .Values.bff.for }}
+      theme: {{ .Values.bff.theme }}
+      title: {{ .Values.bff.title }}
+    http:
+      port: 9092
+      timeout: 5s
+    log:
+      # 日志级别
+      level: {{ .Values.bff.logLevel }}
+
+{{- end -}}

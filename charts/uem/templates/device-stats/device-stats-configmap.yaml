@@ -1,0 +1,25 @@
+{{- if .Values.deviceStats.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{- include "uem.deviceStatsFullname" . }}
+  labels:
+    {{- include "uem.deviceStatsLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    deviceStats:
+      leaderElection: "k8s"
+    http:
+      port: 9085
+      timeout: 1s
+    grpc:
+      addr: 0.0.0.0:9086
+      timeout: 1s
+    log:
+      # 文件大小 B
+      limit: 157286400
+      # 日志级别
+      level: {{ .Values.deviceStats.logLevel }}
+      # 日志写文件最大保留个数
+      max: 3
+      {{- end -}}

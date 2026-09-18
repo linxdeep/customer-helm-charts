@@ -1,0 +1,17 @@
+{{- if .Values.printerAgent.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{- include "uem.printerAgentFullname" . }}
+  labels:
+    {{- include "uem.printerAgentLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.printerAgent.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "uem.printerAgentSelectorLabels" . | nindent 4 }}
+{{- end -}}

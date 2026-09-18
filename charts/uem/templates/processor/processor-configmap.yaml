@@ -1,0 +1,19 @@
+{{- if .Values.processor.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.processorFullname" . }}
+  labels:
+    {{- include "uem.processorLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    processor:
+      # maximum number of concurrent policy handlers, minimum 1, maximum 100
+      maxPolicy: {{.Values.processor.maxPolicy}}
+    http:
+      port: 9089
+      timeout: 1s
+    log:
+      # 日志级别
+      level: {{ .Values.processor.logLevel }}
+{{- end -}}

@@ -1,0 +1,88 @@
+{{- if .Values.file.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{- include "uem.fileFullname" . }}
+  labels:
+    {{- include "uem.fileLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.file.autoscaling.enabled }}
+  replicas: {{ .Values.file.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.fileSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.file.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.fileSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "wait-for-uemctl" . | nindent 6 }}
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.file.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.file.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{- include "uem.fileFullname" . }}
+          securityContext:
+            {{- toYaml .Values.file.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.file.image) }}
+          imagePullPolicy: {{ .Values.file.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9091
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf
+              name: config
+            - mountPath: /app/tenants
+              name: tenants
+            - mountPath: /app/logs
+              name: log
+            - mountPath: /tmp
+              name: tmp
+          resources:
+            {{- toYaml .Values.file.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: log
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: {{- include "uem.fileFullname" . }}
+        - name: tenants
+          {{- include "pvc" . | nindent 10 }}
+      {{- with .Values.file.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.file.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.file.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

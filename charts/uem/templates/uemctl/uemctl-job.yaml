@@ -1,0 +1,71 @@
+{{- if .Values.uemctl.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: uemctl
+  labels:
+    {{- include "uem.labels" . | nindent 4 }}
+  annotations:
+    # Runs after all release resources exist (post-install/post-upgrade) and
+    # after the emqx bootstrap job (lower hook weight runs first).
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        {{- include "uem.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.uemctl.podSecurityContext | nindent 8 }}
+      {{- include "wait-for-emqx" . | nindent 6 }}
+      containers:
+        - name: uemctl
+          securityContext:
+            {{- toYaml .Values.uemctl.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.uemctl.image) }}
+          imagePullPolicy: {{ .Values.uemctl.image.pullPolicy }}
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              echo "Executing uemctl emqx update"
+              /app/uemctl emqx update -c /data/conf
+              echo "Executing uemctl schema-2 update"
+              /app/uemctl schema-v2 update -c /data/conf -k {{ .Values.db.keyspace }},s_{{ .Values.db.keyspace }}
+              echo "Executing uemctl kafka topic create"
+              /app/uemctl kafka -c /data/conf
+              echo "Executing uemctl tenant init"
+              /app/uemctl tenant init -c /data/conf -l {{ .Values.bff.culture }}
+              echo "Executing uemctl search index template create"
+              /app/uemctl search template -c /data/conf
+              echo "Executing uemctl migration run"
+              /app/uemctl migrate -c /data/conf
+          volumeMounts:
+            {{- include "middleware-config" . | nindent 12 }}
+      volumes:
+        - name: middleware-config
+          configMap:
+            name: middleware
+      {{- with .Values.uemctl.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uemctl.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uemctl.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

@@ -1,0 +1,77 @@
+{{- if .Values.windows.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{- include "uem.windowsFullname" . }}
+  labels:
+    {{- include "uem.windowsLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.windows.autoscaling.enabled }}
+  replicas: {{ .Values.windows.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.windowsSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.windows.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.windowsSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "wait-for-uemctl" . | nindent 6 }}
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.windows.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.windows.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{- include "uem.windowsFullname" . }}
+          securityContext:
+            {{- toYaml .Values.windows.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.windows.image) }}
+          imagePullPolicy: {{ .Values.windows.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9096
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              name: config
+          resources:
+            {{- toYaml .Values.windows.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{- include "uem.windowsFullname" . }}
+      {{- with .Values.windows.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.windows.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.windows.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

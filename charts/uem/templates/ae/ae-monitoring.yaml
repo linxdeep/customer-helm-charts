@@ -1,0 +1,18 @@
+{{- if and .Values.ae.enabled .Values.ae.metrics .Values.monitoring.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "uem.aeFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.monitoring.labels | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "uem.aeFullname" . }}
+  endpoints:
+  - port: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end -}}

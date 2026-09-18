@@ -1,0 +1,142 @@
+# Complete example values for the uem chart.
+# Copy, adjust and pass with: helm install uem charts/uem -f my-values.yaml
+
+global:
+  imageRegistry: "registry.example.com"     # your registry hosting the UEM images
+  imagePullSecrets:
+    - name: regcred
+  kubectlImage: "docker.io/bitnami/kubectl:latest"
+  curlImage: "docker.io/curlimages/curl:latest"
+  waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
+
+fullnameOverride: uem
+
+domain: "uem.example.com"
+license: "<your-license>"
+
+pvc:
+  enabled: true
+  storage: 16Gi
+  storageClass: ""
+
+email:
+  smtp: "smtp.example.com"
+  port: 465
+  username: "uem@example.com"
+  password: "<smtp-password>"
+
+otel:
+  enable: false
+  endpoint: ""
+  insecure: true
+  protocol: grpc
+
+s3:
+  enabled: true
+  region: "us-east-1"
+  accessKey: "<access-key>"
+  secretKey: "<secret-key>"
+  bucketName: "uem-files"
+  domain: "https://files.example.com"
+
+search:
+  type: es
+  deviceIndexPrefix: devices
+  es:
+    addresses:
+      - "https://elasticsearch-es-http.search.svc.cluster.local:9200"
+    username: "elastic"
+    password: "<es-password>"
+    insecureSkipVerify: true
+    maxRetries: 3
+    timeout: 10s
+
+redis:
+  addr: "redis:6379"
+  cluster: false
+
+kafka:
+  enabled: true
+  brokerList:
+    - "uem-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  groupId: "uem"
+
+db:
+  address: "uem-cluster-dc1-service.cassandra.svc.cluster.local:9042"
+  pool: 2
+  timeout: 60
+  keyspace: "uem"
+  username: "uemdb"
+  password: "<cassandra-password>"
+  replication: 3
+  keyspaceClass:
+    keyspaceClass: NetworkTopologyStrategy
+    dataCenter:
+      dc1: 3
+
+mqtt:
+  username: "<mqtt-username>"
+  password: "<mqtt-password>"
+  version: 5
+  external: "mqtt.example.com"
+  tcpPort: "1883"
+  sslPort: "8883"
+  # After the first install, copy the generated values here (see README).
+  apiKey: ""
+  apiSecret: ""
+
+emqx:
+  address: "emqx:1883"
+  apiAddress: "emqx:18083"
+  adminPassword: "<emqx-dashboard-admin-password>"
+  bootstrap:
+    enabled: true
+
+partner:
+  server: "https://partner.example.com"
+
+http:
+  lbMode: true
+  ginMode: release
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  tls:
+    - secretName: uem-tls
+      hosts: [uem.example.com]
+  attachmentRoute:
+    enabled: false
+  grpc:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+
+monitoring:
+  enabled: false
+  labels: {}
+    # release: kube-prometheus-stack
+
+ai:
+  server: ""
+  headers: {}
+
+# Application services: adjust replicas/resources to your load.
+# Every service supports: replicaCount, image.tag, resources, nodeSelector,
+# tolerations, affinity (see charts/uem/values.yaml for all defaults).
+processor:
+  replicaCount: 3
+
+remoteProxy:
+  stun:
+    - "stun:stun.example.com:3478"
+  turn:
+    - turn: "turn:turn.example.com:3479"
+
+bff:
+  title: "UEM Console"
+  theme: "default"
+  culture: "en-US"

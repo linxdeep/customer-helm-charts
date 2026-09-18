@@ -1,0 +1,17 @@
+{{- if .Values.devices.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.devicesFullname" . }}
+  labels:
+    {{- include "uem.devicesLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    http:
+      port: 9090
+      timeout: 1s
+    log:
+      # 日志级别
+      level: {{ .Values.devices.logLevel }}
+      hookLog: {{ .Values.devices.hookLog }}
+{{- end -}}

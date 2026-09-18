@@ -1,0 +1,19 @@
+{{- if .Values.proglove.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.progloveFullname" . }}
+  labels:
+    {{- include "uem.progloveLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    proglove:
+      api: http://devices
+    http:
+      port: 9084
+      timeout: 5s
+      swagger: true
+    log:
+      # 日志级别
+      level: {{ .Values.proglove.logLevel }}
+{{- end -}}

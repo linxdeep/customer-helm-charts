@@ -1,0 +1,45 @@
+{{- if .Values.remoteProxy.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{- include "uem.remoteProxyFullname" . }}
+  labels:
+    {{- include "uem.remoteProxyLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    http:
+      port: 9097
+      ginMode: release
+      debug: true
+
+    grpc:
+      addr: :9099
+      timeout: 10s
+      external: https://{{ .Values.domain }}:443
+
+    mqtt:
+      id: zerosecond
+      tcp: emqx:1883
+      username: {{ .Values.mqtt.username }}
+      password: {{ .Values.mqtt.password }}
+
+    ltCred:
+      stun:
+{{- range .Values.remoteProxy.stun }}
+        - {{ . }}
+{{- end }}
+      turn:
+{{- range .Values.remoteProxy.turn }}
+{{- range $key, $value := . }}
+        - {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+
+    log:
+      # 文件大小 B
+      limit: 157286400
+      # 日志级别
+      level: {{ .Values.remoteProxy.logLevel }}
+      # 日志写文件最大保留个数
+      max: 3
+{{- end -}}

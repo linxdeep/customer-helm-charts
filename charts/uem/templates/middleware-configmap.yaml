@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: middleware
+  labels:
+    {{- include "uem.labels" . | nindent 4 }}
+data:
+  cassandra.yaml: |
+    database:
+      address: {{ .Values.db.address }}
+      pool: {{ .Values.db.pool }}
+      timeout: {{ .Values.db.timeout }}
+      keyspace: {{ .Values.db.keyspace }}
+      username: {{ .Values.db.username }}
+      password: {{ .Values.db.password }}
+      replication: {{ .Values.db.replication }}
+      {{- if .Values.secretManager.enable }}
+      secretName: {{ .Values.db.secretName }}
+      {{- end }}
+      {{- toYaml .Values.db.keyspaceClass | nindent 6 }}
+
+  emqx.yaml: |
+    mqtt:
+      id: {{ .Values.mqtt.id | default "zerosecond" }}
+      tcp: {{ .Values.emqx.address }}
+      username: {{ .Values.mqtt.username }}
+      password: {{ .Values.mqtt.password }}
+      api: {{ .Values.emqx.apiAddress }}
+      apiKey: {{ .Values.mqtt.apiKey | default "API_KEY"}}
+      apiSecret: {{ .Values.mqtt.apiSecret | default "API_SECRET"}}
+      version: "{{ .Values.mqtt.version }}"
+      external: {{ .Values.mqtt.external }}:{{ .Values.mqtt.tcpPort }}
+      sslExternal: {{ .Values.mqtt.external }}:{{ .Values.mqtt.sslPort }}
+
+  http.yaml: |
+    http:
+      lbMode: {{ .Values.http.lbMode }}
+      ginMode: {{ .Values.http.ginMode }}
+      external: https://{{ .Values.domain }}
+
+  {{- if .Values.kafka.enabled }}
+  kafka.yaml: |
+    kafka:
+      broker_list:
+        {{ .Values.kafka.brokerList | toYaml | nindent 8 }}
+      group_id: {{ .Values.kafka.groupId }}
+  {{- end }}
+
+  otel.yaml: |
+    otel:
+      endpoint: {{ .Values.otel.endpoint }}
+      enable: {{ .Values.otel.enable }}
+      insecure: {{ .Values.otel.insecure }}
+      protocol: {{ .Values.otel.protocol }}
+
+  redis.yaml: |
+    redis:
+      addr: {{ .Values.redis.addr }}
+      cluster: {{ .Values.redis.cluster }}
+
+  server.yaml: |
+    ae:
+      server: http://ae
+
+    apple:
+      server: http://apple
+
+    remoteProxy:
+      server: http://remote-proxy
+
+    deviceStats:
+      server: http://device-stats
+
+    partner:
+      server: {{ .Values.partner.server }}
+
+    windows:
+      server: http://windows
+
+    devices:
+      server: http://devices
+
+    cronjob:
+      server: http://cronjob
+
+    fileServer:
+      server: http://file
+
+    proglove:
+      server: http://proglove
+
+    printer:
+      server: http://printer-agent
+
+    logsParse:
+      server: http://logs-parse:8081
+
+    ai:
+      server: {{ .Values.ai.server }}
+      headers:
+        {{- .Values.ai.headers | toYaml | nindent 8 }}
+
+  search.yaml: |
+    search:
+      type: {{ .Values.search.type }}
+      deviceIndexPrefix: {{ .Values.search.deviceIndexPrefix }}
+      es:
+        addresses:
+          {{ .Values.search.es.addresses | toYaml | nindent 10 }}
+        username: {{ .Values.search.es.username }}
+        password: {{ .Values.search.es.password }}
+        insecureSkipVerify: {{ .Values.search.es.insecureSkipVerify }}
+        maxRetries: {{ .Values.search.es.maxRetries }}
+        timeout: {{ .Values.search.es.timeout }}
+
+  aws.yaml: |
+    aws:
+      secretManager:
+        enable: {{ .Values.secretManager.enable }}
+        region: {{ .Values.secretManager.region }}
+        prefix: {{ .Values.secretManager.prefix }}
+        accessKey: {{ .Values.secretManager.accessKey }}
+      s3:
+        bucket: {{ .Values.s3.bucketName }}
+        region: {{ .Values.s3.region }}
+        accessKey: {{ .Values.s3.accessKey }}
+        secretKey: {{ .Values.s3.secretKey }}
+        domain: {{ .Values.s3.domain }}
+
+  license.yaml: |
+    license:
+      source: {{ .Values.license }}
+
+  email.yaml: |
+    email:
+      smtp: {{ .Values.email.smtp }}
+      port: {{ .Values.email.port }}
+      username: {{ .Values.email.username }}
+      password: {{ .Values.email.password }}

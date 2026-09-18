@@ -1,0 +1,42 @@
+{{- if .Values.ae.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.aeFullname" . }}
+  labels:
+    {{- include "uem.aeLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    http:
+      port: 9095 # 端口 默认 9095
+      swagger: true # 是否开启接口文档
+      allowOrigin: "*" # 跨域地址
+    ae:
+      api: http://devices # 设备服地址
+      # Api 风格： tenant, lb, header, 默认 tenant
+      apiStyle: header
+      # ae api 每分钟最大限制数量，最大 600 次，默认 100
+      aeLimit: 200
+      # zt api 每分钟最大限制数量，最大 60000 次，默认 10000
+      ztLimit: 20000
+      # 内存模式，仅供自测用
+      memoryMode: false
+      # ae kiosk 小程序安装包名称，默认 com.safeuem.aekiosk
+      kiosk: {{ .Values.ae.kiosk }}
+      kioskSetting:
+        delegateScopes:
+          - ENABLE_SYSTEM_APP
+          - PACKAGE_ACCESS
+          - CERT_INSTALL
+        permissionGrants:
+          - permission: android.permission.READ_PRIVILEGED_PHONE_STATE
+            policy: GRANT
+          - permission: android.permission.READ_PHONE_STATE
+            policy: GRANT
+
+    log:
+      level: {{ .Values.ae.logLevel }}
+      filters:
+        debug:
+          - pubsub
+{{- end -}}

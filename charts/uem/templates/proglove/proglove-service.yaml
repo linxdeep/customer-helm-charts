@@ -1,0 +1,17 @@
+{{- if .Values.proglove.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "uem.progloveFullname" . }}
+  labels:
+    {{- include "uem.progloveLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.apple.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "uem.progloveSelectorLabels" . | nindent 4 }}
+{{- end -}}

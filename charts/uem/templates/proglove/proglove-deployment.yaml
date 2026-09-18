@@ -1,0 +1,81 @@
+{{- if .Values.proglove.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "uem.progloveFullname" . }}
+  labels:
+    {{- include "uem.progloveLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.proglove.autoscaling.enabled }}
+  replicas: {{ .Values.proglove.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.progloveSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.proglove.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.progloveSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "wait-for-uemctl" . | nindent 6 }}
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.proglove.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.proglove.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "uem.progloveFullname" . }}
+          securityContext:
+            {{- toYaml .Values.proglove.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.proglove.image) }}
+          imagePullPolicy: {{ .Values.proglove.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9084
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              name: config
+            {{- include "middleware-config" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.proglove.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "uem.progloveFullname" . }}
+        - name: middleware-config
+          configMap:
+            name: middleware
+      {{- with .Values.proglove.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.proglove.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.proglove.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

@@ -1,0 +1,21 @@
+{{- if .Values.deviceStats.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{- include "uem.deviceStatsFullname" . }}
+  labels:
+    {{- include "uem.deviceStatsLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.deviceStats.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9086
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "uem.deviceStatsSelectorLabels" . | nindent 4 }}
+{{- end -}}

@@ -1,0 +1,81 @@
+{{- if .Values.cronjob.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "uem.cronjobFullname" . }}
+  labels:
+    {{- include "uem.cronjobLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.cronjob.autoscaling.enabled }}
+  replicas: {{ .Values.cronjob.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.cronjobSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.cronjob.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.cronjobSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "wait-for-uemctl" . | nindent 6 }}
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.cronjob.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.cronjob.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "uem.cronjobFullname" . }}
+          securityContext:
+            {{- toYaml .Values.cronjob.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.cronjob.image) }}
+          imagePullPolicy: {{ .Values.cronjob.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9094
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              name: config
+            {{- include "middleware-config" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.cronjob.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "uem.cronjobFullname" . }}
+        - name: middleware-config
+          configMap:
+            name: middleware
+      {{- with .Values.cronjob.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cronjob.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cronjob.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

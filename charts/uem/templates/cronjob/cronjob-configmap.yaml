@@ -1,0 +1,22 @@
+{{- if .Values.cronjob.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uem.cronjobFullname" . }}
+  labels:
+    {{- include "uem.cronjobLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    cronjob:
+      maintain: {{ .Values.cronjob.maintain }}
+      battery: {{ .Values.cronjob.battery }}
+      collection: {{ .Values.cronjob.collection }}
+      dailyStats: {{ .Values.cronjob.dailyStats }}
+    http:
+      port: 9094
+      timeout: 1s
+      external: {{ .Values.domain }}
+    log:
+      # 日志级别
+      level: {{ .Values.cronjob.logLevel }}
+{{- end -}}

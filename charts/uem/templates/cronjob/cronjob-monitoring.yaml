@@ -1,0 +1,18 @@
+{{- if and .Values.cronjob.enabled .Values.cronjob.metrics .Values.monitoring.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "uem.cronjobFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.monitoring.labels | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "uem.cronjobFullname" . }}
+  endpoints:
+  - port: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end -}}

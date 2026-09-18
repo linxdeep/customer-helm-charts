@@ -1,0 +1,17 @@
+apiVersion: v2
+name: uem
+description: A Helm chart for the UEM platform
+type: application
+
+# This is the chart version. This version number should be incremented each time
+# you make changes to the chart and its templates, including the app version.
+version: 1.0.0
+
+# The version number of the application being deployed. Image tags default to
+# this value when not overridden per service. It is recommended to use it with quotes.
+appVersion: "latest"
+
+# All middleware (Cassandra, Redis, Kafka, EMQX, Elasticsearch) is deployed and
+# managed outside this chart. See docs/ in the repository root for the required
+# versions, operator-based deployment examples and connection settings.
+dependencies: []

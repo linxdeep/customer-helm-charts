@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+
+# Local editors
+.idea/
+.vscode/
+*.swp
+
+# Helm packaging output
+*.tgz
+charts/uem/charts/
+Chart.lock

@@ -1,0 +1,33 @@
+{{- if .Values.printerAgent.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{- include "uem.printerAgentFullname" . }}
+  labels:
+    {{- include "uem.printerAgentLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    http:
+      port: 9083
+      timeout: 1s
+    printer:
+      api: http://devices  # devices
+
+    mqttPrinter:
+      id: printermq
+      {{- if .Values.printerAgent.mqtt.tcp }}
+      tcp: {{ .Values.printerAgent.mqtt.tcp }}
+      {{- else }}
+      tls: {{ .Values.printerAgent.mqtt.tls }}
+      {{- end }}
+      username: {{ .Values.printerAgent.mqtt.username }}
+      password: {{ .Values.printerAgent.mqtt.password }}
+      external: {{ .Values.printerAgent.mqtt.external }}
+    log:
+      # 文件大小 B
+      limit: 157286400
+      # 日志级别
+      level: {{ .Values.printerAgent.logLevel }}
+      # 日志写文件最大保留个数
+      max: 3
+      {{- end -}}

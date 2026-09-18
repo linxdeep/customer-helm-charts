@@ -1,0 +1,21 @@
+{{- if .Values.remoteProxy.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{- include "uem.remoteProxyFullname" . }}
+  labels:
+    {{- include "uem.remoteProxyLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.remoteProxy.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9099
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "uem.remoteProxySelectorLabels" . | nindent 4 }}
+{{- end -}}

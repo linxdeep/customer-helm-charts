@@ -1,0 +1,194 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress
+  labels:
+    {{- include "uem.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $host := concat (list $.Values.domain) $.Values.ingress.extraHosts | compact | uniq }}
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          {{- if $.Values.ingress.attachmentRoute.enabled }}
+          # NOTE: standard Ingress cannot match by HTTP method. This route sends
+          # every /api/attachment request to the file service. Verify that your
+          # upload flow (POST /api/attachment) still targets the intended backend,
+          # or disable it via ingress.attachmentRoute.enabled.
+          - path: /api/attachment
+            pathType: Prefix
+            backend:
+              service:
+                name: file
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.remoteProxy.enabled }}
+          - path: /sse/rcw
+            pathType: Prefix
+            backend:
+              service:
+                name: remote-proxy
+                port:
+                  number: 80
+          - path: /wss/rcw
+            pathType: Prefix
+            backend:
+              service:
+                name: remote-proxy
+                port:
+                  number: 80
+          - path: /zs/temp/remoteControl
+            pathType: Prefix
+            backend:
+              service:
+                name: remote-proxy
+                port:
+                  number: 80
+          - path: /zs/temp/rcd
+            pathType: Prefix
+            backend:
+              service:
+                name: remote-proxy
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.bff.enabled }}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 80
+          - path: /partner
+            pathType: Prefix
+            backend:
+              service:
+                name: bff
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.apple.enabled }}
+          - path: /apple
+            pathType: Prefix
+            backend:
+              service:
+                name: apple
+                port:
+                  number: 80
+          - path: /MDMServiceConfig
+            pathType: Prefix
+            backend:
+              service:
+                name: apple
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.windows.enabled }}
+          - path: /ManagementServer
+            pathType: Prefix
+            backend:
+              service:
+                name: windows
+                port:
+                  number: 80
+          - path: /EnrollmentServer
+            pathType: Prefix
+            backend:
+              service:
+                name: windows
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.devices.enabled }}
+          - path: /zs
+            pathType: Prefix
+            backend:
+              service:
+                name: devices
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.file.enabled }}
+          - path: /files
+            pathType: Prefix
+            backend:
+              service:
+                name: file
+                port:
+                  number: 80
+          - path: /file
+            pathType: Prefix
+            backend:
+              service:
+                name: file
+                port:
+                  number: 80
+          - path: /dispatch
+            pathType: Prefix
+            backend:
+              service:
+                name: file
+                port:
+                  number: 80
+          {{- end }}
+          {{- if $.Values.www.enabled }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: www
+                port:
+                  number: 80
+          {{- end }}
+    {{- end }}
+---
+{{/* gRPC ingress for the remote-proxy service. Requires an ingress controller
+     with gRPC support (e.g. nginx with backend-protocol: GRPC). */}}
+{{- if and .Values.ingress.enabled .Values.ingress.grpc.enabled .Values.remoteProxy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grpc-ingress
+  labels:
+    {{- include "uem.labels" . | nindent 4 }}
+  {{- with .Values.ingress.grpc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $host := concat (list $.Values.domain) $.Values.ingress.extraHosts | compact | uniq }}
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: /linxdeep.remote.proxy.v1.RemoteProxy
+            pathType: Prefix
+            backend:
+              service:
+                name: remote-proxy
+                port:
+                  number: 9099
+    {{- end }}
+{{- end }}
+{{- end }}

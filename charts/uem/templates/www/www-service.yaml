@@ -1,0 +1,17 @@
+{{- if .Values.www.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{- include "uem.wwwFullname" . }}
+  labels:
+      {{- include "uem.wwwLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.www.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "uem.wwwSelectorLabels" . | nindent 4 }}
+{{- end -}}

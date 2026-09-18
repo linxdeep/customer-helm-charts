@@ -1,0 +1,86 @@
+{{- if .Values.ae.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "uem.aeFullname" . }}
+  labels:
+    {{- include "uem.aeLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.ae.autoscaling.enabled }}
+  replicas: {{ .Values.ae.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.aeSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.ae.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.aeSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "wait-for-devices" . | nindent 6 }}
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.ae.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.ae.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "uem.aeFullname" . }}
+          securityContext:
+            {{- toYaml .Values.ae.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.ae.image) }}
+          imagePullPolicy: {{ .Values.ae.image.pullPolicy }}
+{{/*          resizePolicy:*/}}
+{{/*            - resourceName: cpu*/}}
+{{/*              restartPolicy: NotRequired*/}}
+{{/*            - resourceName: memory*/}}
+{{/*              restartPolicy: NotRequired*/}}
+          ports:
+            - name: http
+              containerPort: 9095
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              name: config
+              {{- include "middleware-config" . | nindent 10 }}
+          resources:
+          {{- toYaml .Values.ae.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "uem.aeFullname" . }}
+        - name: middleware-config
+          configMap:
+            name: middleware
+      {{- with .Values.ae.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ae.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ae.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

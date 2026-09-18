@@ -1,0 +1,696 @@
+# Default values for the uem chart.
+#
+# IMPORTANT: this chart deploys the application services only. All middleware
+# (Cassandra, Redis, Kafka, EMQX, Elasticsearch) must be deployed beforehand.
+# See docs/ in the repository root for the required versions and examples.
+
+# -- Global settings applied to every service.
+global:
+  # -- Optional registry prefix prepended to every image, e.g. "registry.example.com".
+  # Service images below are then referenced as <registry>/<repository>:<tag>.
+  imageRegistry: ""
+  # -- Pull secrets merged into every pod. Example: [{ name: regcred }]
+  imagePullSecrets: []
+  # -- Image used by init containers that need kubectl.
+  kubectlImage: "docker.io/bitnami/kubectl:latest"
+  # -- Image used by the EMQX bootstrap job (curl).
+  curlImage: "docker.io/curlimages/curl:latest"
+  # -- Image used by init containers waiting on other resources.
+  waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
+
+fullnameOverride: uem
+
+# -- Public domain of this deployment, e.g. uem.example.com.
+# The console and all HTTP APIs are served under this host (and *.<domain>).
+domain: ""
+
+# -- License string.
+license: ""
+
+# -- Shared persistent volume for the file service and device uploads.
+pvc:
+  enabled: false
+  storage: 16Gi
+  # -- Storage class for the PVC. Leave empty to use the cluster default.
+  storageClass: ""
+  # -- Set to "s3" to skip the PVC (files stored in object storage only).
+  type: ""
+
+# -- Outgoing email (SMTP) settings.
+email:
+  smtp: ""
+  port: 465
+  username: ""
+  password: ""
+
+# -- OpenTelemetry export. Disabled by default.
+otel:
+  endpoint: ""
+  enable: false
+  insecure: true
+  protocol: grpc
+
+# -- S3-compatible object storage used for attachments and files.
+s3:
+  enabled: true
+  region: ""
+  accessKey: ""
+  secretKey: ""
+  bucketName: ""
+  # -- Public URL of the bucket (or CDN in front of it), e.g. https://files.example.com
+  domain: ""
+
+# -- AWS Secrets Manager integration (optional, AWS environments only).
+secretManager:
+  enable: false
+  region: ""
+  prefix: ""
+  accessKey: ""
+  secretKey: ""
+
+# -- Search engine settings. Elasticsearch only (deployed outside this chart).
+search:
+  type: es
+  deviceIndexPrefix: devices
+  es:
+    # -- Elasticsearch endpoints, e.g. ["https://elasticsearch-es-http.search:9200"]
+    addresses: []
+    username: "elastic"
+    password: ""
+    insecureSkipVerify: true
+    maxRetries: 3
+    timeout: 10s
+
+# -- Redis connection (deployed outside this chart).
+redis:
+  # -- host:port reachable from inside the cluster, e.g. redis-master:6379
+  addr: ""
+  # -- Set true when pointing at a Redis Cluster deployment.
+  cluster: false
+
+# -- Kafka connection (deployed outside this chart).
+kafka:
+  enabled: true
+  # -- Broker list, e.g. ["my-cluster-kafka-bootstrap:9092"]
+  brokerList: []
+  groupId: "uem"
+
+# -- Cassandra connection (deployed outside this chart).
+db:
+  address: ""
+  pool: 2
+  timeout: 60
+  keyspace: ""
+  username: ""
+  password: ""
+  replication: 1
+  secretName: ""
+  keyspaceClass:
+    # The class of the keyspace, e.g. SimpleStrategy, NetworkTopologyStrategy
+    keyspaceClass: SimpleStrategy
+    # dataCenter: A map of data centers and their replication factor.
+    # It is only used when keyspaceClass is NetworkTopologyStrategy.
+    # dataCenter:
+    #  -dc1: 3
+
+# -- MQTT settings (credentials for the externally deployed EMQX cluster).
+mqtt:
+  id: ""
+  username: ""
+  password: ""
+  version: 5
+  apiKey: ""
+  apiSecret: ""
+  # -- Public hostname devices connect to, e.g. mqtt.example.com
+  external: ""
+  tcpPort: "1883"
+  sslPort: "8883"
+
+# -- EMQX cluster connection. EMQX itself is deployed outside this chart
+# (see docs/middleware-emqx.md).
+emqx:
+  # -- MQTT listener of the EMQX cluster, host:port, e.g. emqx:1883
+  address: "emqx:1883"
+  # -- Management API of the EMQX cluster, host:port, e.g. emqx:18083
+  apiAddress: "emqx:18083"
+  # -- Dashboard admin password of the EMQX cluster. Must match the password
+  # configured when the cluster was deployed.
+  adminPassword: ""
+  bootstrap:
+    # -- Post-install job that provisions the EMQX API key and business rules.
+    enabled: true
+
+# -- Partner portal server advertised to clients.
+partner:
+  server: ""
+
+http:
+  lbMode: true
+  ginMode: release
+
+# -- Standard Kubernetes Ingress. Disabled by default: the routing rules are
+# documented in docs/ingress-routing.md so you can use any ingress controller.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # -- Additional hosts served by the generated Ingress.
+  extraHosts: []
+  # -- TLS configuration, e.g. [{ secretName: uem-tls, hosts: [uem.example.com] }]
+  tls: []
+  attachmentRoute:
+    # -- Route /api/attachment to the file service. NOTE: standard Ingress
+    # rules cannot match by HTTP method, enable only after verifying your
+    # upload flow. See docs/ingress-routing.md.
+    enabled: false
+  grpc:
+    # -- Separate Ingress for the remote-proxy gRPC endpoint. Requires an
+    # ingress controller with gRPC support.
+    enabled: false
+    # Example for nginx:
+    #   nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    annotations: {}
+
+# -- Prometheus ServiceMonitor resources. Requires the prometheus operator.
+monitoring:
+  enabled: false
+  # -- Labels added to every ServiceMonitor so your Prometheus picks it up,
+  # e.g. { release: kube-prometheus-stack }
+  labels: {}
+
+# -- External AI service (optional).
+ai:
+  server: ""
+  headers: {}
+    # Example:
+    # X-Root-API-Key: xxx
+    # X-Root-Project-ID: 00000000-0000-0000-0000-000000000000
+
+# -----------------------------------------------------------------------------
+# Application services
+#
+# Common knobs per service: enabled, replicaCount, logLevel, metrics, image
+# (repository/tag/pullPolicy), imagePullSecrets, podAnnotations,
+# podSecurityContext, securityContext, service.type, resources, autoscaling,
+# nodeSelector, tolerations, affinity.
+# -----------------------------------------------------------------------------
+
+ae:
+  enabled: true
+  replicaCount: 1
+  # -- iOS kiosk app bundle identifier.
+  kiosk: "com.safeuem.aekiosk"
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/ae"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9095
+    runAsUser: 9095
+    runAsGroup: 9095
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 8Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+apple:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/apple"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9093
+    runAsUser: 9093
+    runAsGroup: 9093
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+bff:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  for: "usa"
+  # -- Console title and theme shown to end users.
+  title: ""
+  theme: ""
+  culture: "en-US"
+  image:
+    repository: "uem/bff"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9092
+    runAsUser: 9092
+    runAsGroup: 9092
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+devices:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  hookLog: false
+  metrics: true
+  image:
+    repository: "uem/devices"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9090
+    runAsUser: 9090
+    runAsGroup: 9090
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+cronjob:
+  enabled: true
+  # -- Cron schedules (server timezone).
+  maintain: "30 0 * * *"
+  battery: "0 1 * * *"
+  collection: "0 2 * * *"
+  dailyStats: "0 0 * * *"
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/cronjob"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9090
+    runAsUser: 9090
+    runAsGroup: 9090
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+processor:
+  enabled: true
+  maxPolicy: 10
+  replicaCount: 3
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/processor"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9090
+    runAsUser: 9090
+    runAsGroup: 9090
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+www:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "uem/www"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+windows:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/windows"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9098
+    runAsUser: 9098
+    runAsGroup: 9098
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# -- One-shot initialization job (schema migration, Kafka topics, search
+# templates, tenant init). Runs automatically as a post-install hook.
+uemctl:
+  enabled: true
+  image:
+    repository: "uem/uemctl"
+    pullPolicy: IfNotPresent
+    tag: ""
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+file:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  cdn: ""
+  image:
+    repository: "uem/fileserver"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9090
+    runAsUser: 9090
+    runAsGroup: 9090
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+remoteProxy:
+  enabled: true
+  replicaCount: 1
+  # -- Public STUN/TURN servers used for remote control, e.g.
+  # stun: ["stun:stun.example.com:3478"]
+  # turn: [{ turn: "turn:turn.example.com:3479" }]
+  stun: []
+  turn: []
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/remote-proxy"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9097
+    runAsUser: 9097
+    runAsGroup: 9097
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+deviceStats:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/device-stats"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9097
+    runAsUser: 9097
+    runAsGroup: 9097
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+proglove:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  image:
+    repository: "uem/proglove"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9097
+    runAsUser: 9097
+    runAsGroup: 9097
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+printerAgent:
+  enabled: true
+  replicaCount: 1
+  logLevel: info
+  metrics: true
+  # -- MQTT endpoint of an external printer gateway, e.g.
+  # tcp: "mqtt.example.com:1883"
+  # external: "mqtts://mqtt.example.com:8883"
+  mqtt:
+    tcp: ""
+    tls: ""
+    username: ""
+    password: ""
+    external: ""
+  image:
+    repository: "uem/printer-agent"
+    pullPolicy: IfNotPresent
+    tag: ""
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 9097
+    runAsUser: 9097
+    runAsGroup: 9097
+  securityContext: {}
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 10m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

@@ -1,0 +1,81 @@
+{{- if .Values.printerAgent.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{- include "uem.printerAgentFullname" . }}
+  labels:
+    {{- include "uem.printerAgentLabels" . | nindent 4 }}
+spec:
+  {{- if not .Values.printerAgent.autoscaling.enabled }}
+  replicas: {{ .Values.printerAgent.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "uem.printerAgentSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.printerAgent.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "uem.printerAgentSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.printerAgent.imagePullSecrets) | nindent 6 }}
+      {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
+      securityContext:
+        {{- toYaml .Values.printerAgent.podSecurityContext | nindent 8 }}
+      {{- include "wait-for-emqx" . | nindent 6 }}
+      containers:
+        - name: {{- include "uem.printerAgentFullname" . }}
+          securityContext:
+            {{- toYaml .Values.printerAgent.securityContext | nindent 12 }}
+          image: {{ include "uem.image" (dict "root" $ "image" .Values.printerAgent.image) }}
+          imagePullPolicy: {{ .Values.printerAgent.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9083
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /data/conf/config.yaml
+              subPath: config.yaml
+              name: config
+            {{- include "middleware-config" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.printerAgent.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{- include "uem.printerAgentFullname" . }}
+        - name: middleware-config
+          configMap:
+            name: middleware
+      {{- with .Values.printerAgent.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.printerAgent.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.printerAgent.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end -}}

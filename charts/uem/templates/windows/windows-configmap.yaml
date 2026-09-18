@@ -1,0 +1,38 @@
+{{- if .Values.windows.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{- include "uem.windowsFullname" . }}
+  labels:
+    {{- include "uem.windowsLabels" . | nindent 4 }}
+data:
+  config.yaml: |
+    windows:
+      port: 9096
+      api: http://devices
+      allowOrigin: "*"
+      https: false
+      swagger: true
+      ginmode: release
+      external: https://{{ .Values.domain }}
+      tenantTopic: true
+    database:
+      address: {{ .Values.db.address }}
+      pool: {{ .Values.db.pool }}
+      timeout: {{ .Values.db.timeout }}
+      keyspace: {{ .Values.db.keyspace }}
+      username: {{ .Values.db.username }}
+      password: {{ .Values.db.password }}
+    mqtt:
+      id: zerosecond
+      tcp: emqx:1883
+      username: {{ .Values.mqtt.username }}
+      password: {{ .Values.mqtt.password }}
+    log:
+      limit: 1048576
+      level: {{ .Values.windows.logLevel }}
+      max: 3
+    consul:
+      register: false
+      discovery: false
+{{- end -}}
