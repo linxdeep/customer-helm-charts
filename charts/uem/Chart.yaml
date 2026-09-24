@@ -6,7 +6,7 @@ kubeVersion: ">=1.26.0-0"
 
 # This is the chart version. This version number should be incremented each time
 # you make changes to the chart and its templates, including the app version.
-version: 6.8.0
+version: 6.7.0
 
 # The version number of the application being deployed. Image tags default to
 # this value when not overridden per service. It is recommended to use it with quotes.
