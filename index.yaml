@@ -5,7 +5,7 @@ entries:
     appVersion: latest
     created: "2026-09-24T06:41:33.334780067Z"
     description: A Helm chart for the UEM platform
-    digest: 19ea745ed5f18ff8d9eab5296206b80cb508a7ae43b912222cfad96db639c2f9
+    digest: 1014c55251f63409aad0d8baa1dcc3e2052e75cf87a29ca5fdfd693e57c53338
     kubeVersion: '>=1.26.0-0'
     name: uem
     type: application
