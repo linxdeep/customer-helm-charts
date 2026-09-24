@@ -15,6 +15,8 @@ global:
   imagePullSecrets: []
   # -- Image used by init containers that need kubectl.
   kubectlImage: "docker.io/bitnami/kubectl:latest"
+  # -- Image used by the EMQX bootstrap job (curl).
+  curlImage: "docker.io/curlimages/curl:latest"
   # -- Image used by init containers waiting on other resources.
   waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
 
@@ -116,8 +118,8 @@ db:
 # -- MQTT settings (credentials for the externally deployed EMQX cluster).
 mqtt:
   id: "uem"
-  username: ""
-  password: ""
+  username: "admin"
+  password: "public"
   version: 5
   apiKey: ""
   apiSecret: ""
@@ -126,14 +128,19 @@ mqtt:
   tcpPort: "1883"
   sslPort: "8883"
 
-# -- EMQX cluster connection. EMQX itself is deployed and configured outside
-# this chart (see docs/middleware-emqx.md), including the API key and business
-# rules the platform needs (mqtt.apiKey / mqtt.apiSecret).
+# -- EMQX cluster connection. EMQX itself is deployed outside this chart
+# (see docs/middleware-emqx.md).
 emqx:
-  # -- MQTT listener of the EMQX cluster, host:port, e.g. emqx:1883
-  address: "emqx:1883"
-  # -- Management API of the EMQX cluster, host:port, e.g. emqx:18083
-  apiAddress: "emqx:18083"
+  # -- MQTT listener of the EMQX cluster, host:port, e.g. emqx-listeners.emqx:1883
+  address: ""
+  # -- Management API of the EMQX cluster, host:port, e.g. emqx-dashboard.emqx:18083
+  apiAddress: ""
+  # -- Dashboard admin password of the EMQX cluster. Must match the password
+  # configured when the cluster was deployed.
+  adminPassword: ""
+  bootstrap:
+    # -- Post-install job that provisions the EMQX API key and business rules.
+    enabled: true
 
 # -- Partner portal server advertised to clients.
 partner:

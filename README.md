@@ -72,9 +72,8 @@ kubectl -n uem get pods
 | `domain` | Public hostname of the console |
 | `license` | License string |
 | `db.*` | Cassandra address/keyspace/credentials |
-| `emqx.address`, `emqx.apiAddress` | EMQX cluster endpoints |
+| `emqx.address`, `emqx.apiAddress`, `emqx.adminPassword` | EMQX cluster endpoints and dashboard password (used by the bootstrap job) |
 | `mqtt.username/password/external` | MQTT credentials and public host |
-| `mqtt.apiKey/apiSecret` | EMQX management API key — create it (and the required business rules) on the EMQX cluster **before** installing, see [docs/middleware-emqx.md](docs/middleware-emqx.md) |
 | `redis.addr` | `host:port` of Redis |
 | `kafka.brokerList` | Kafka bootstrap servers |
 | `search.es.*` | Elasticsearch endpoint and credentials |
@@ -93,11 +92,19 @@ outside Kubernetes (see [docs/ingress-routing.md](docs/ingress-routing.md)).
 
 ## Upgrade notes
 
-The EMQX API key and business rules are **not managed by this chart**. Create
-them on the EMQX cluster as described in
-[docs/middleware-emqx.md](docs/middleware-emqx.md) and keep the resulting
-`mqtt.apiKey` / `mqtt.apiSecret` in your values file — the `middleware`
-ConfigMap is rendered from your values on every upgrade.
+After the first installation, the `emqx` post-install job creates an EMQX API
+key and writes it into the `middleware` ConfigMap. Because Helm resets the
+ConfigMap on every upgrade, **copy the generated `apiKey`/`apiSecret` into your
+values file** (`mqtt.apiKey` / `mqtt.apiSecret`) once the first install
+succeeds:
+
+```bash
+kubectl -n uem get configmap middleware -o jsonpath='{.data.emqx\.yaml}'
+```
+
+Alternatively, pre-provision the API key and rules yourself in EMQX (see
+[docs/middleware-emqx.md](docs/middleware-emqx.md)) and set
+`emqx.bootstrap.enabled=false` together with `mqtt.apiKey`/`mqtt.apiSecret`.
 
 ## Monitoring (optional)
 

@@ -12,30 +12,35 @@ only connects to it:
 
 - `emqx.address` — MQTT listener, `host:port` (default port 1883)
 - `emqx.apiAddress` — management API, `host:port` (default port 18083)
+- `emqx.adminPassword` — dashboard admin password (used by the bootstrap job)
 - `mqtt.username` / `mqtt.password` — MQTT credentials the platform uses
-- `mqtt.apiKey` / `mqtt.apiSecret` — EMQX management API key (see below)
 
 ```yaml
 emqx:
   address: emqx:1883
   apiAddress: emqx:18083
+  adminPassword: "<dashboard admin password>"
+  bootstrap:
+    enabled: true
 mqtt:
   username: <mqtt-user>
   password: <mqtt-password>
-  apiKey: <api-key>
-  apiSecret: <api-secret>
 ```
 
-## Required EMQX configuration
+## What the bootstrap job does
 
-Before installing the platform chart, create on the EMQX cluster:
+On install/upgrade the chart runs a post-install job (`emqx`) that:
 
-1. An **API key** the platform uses to call the management API
-2. The **business rules** `client_connected`, `client_disconnected` and
+1. Logs in to the EMQX API as `admin` with `emqx.adminPassword`
+2. Creates an API key for the platform and patches it into the `middleware`
+   ConfigMap
+3. Creates the business rules `client_connected`, `client_disconnected` and
    `message_acked`
 
-The script below does both through the EMQX management API. Run it from any
-host that can reach `emqx.apiAddress` and has `curl`:
+Set `emqx.bootstrap.enabled=false` only if you provision these yourself — then
+fill `mqtt.apiKey` / `mqtt.apiSecret` and create the three rules manually. The
+script below does exactly what the job would do; run it from any host that can
+reach `emqx.apiAddress` and has `curl`:
 
 ```bash
 #!/bin/sh

@@ -102,6 +102,18 @@ initContainers:
 {{- end -}}
 
 {{/*
+Wait for the emqx post-install configuration job to finish
+*/}}
+{{ define "wait-for-emqx" -}}
+{{- if .Values.emqx.bootstrap.enabled }}
+initContainers:
+  - name: wait-for-emqx
+    image: {{ .Values.global.waitForImage }}
+    args: ["job", "-lbatch.kubernetes.io/name=emqx"]
+{{- end }}
+{{- end }}
+
+{{/*
 Wait for the uemctl initialization job to finish
 */}}
 {{ define "wait-for-uemctl" -}}

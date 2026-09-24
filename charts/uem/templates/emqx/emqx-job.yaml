@@ -1,0 +1,202 @@
+{{- if .Values.emqx.bootstrap.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: emqx
+  labels:
+    {{- include "uem.labels" . | nindent 4 }}
+  annotations:
+    # Runs after all release resources exist. The uemctl job waits for this job
+    # to complete (see wait-for-emqx in _helpers.tpl).
+    helm.sh/hook: post-install, post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  completions: 1
+  parallelism: 1
+  backoffLimit: 3
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        {{- include "uem.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: emqx-sa
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cm
+          image: {{ .Values.global.kubectlImage }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              api_key=$(cat /tmp/api_key.txt)
+              api_secret=$(cat /tmp/api_secret.txt)
+
+              # 检查 api_key 和 api_secret 是否为空
+              if [ -z "$api_key" ] || [ -z "$api_secret" ]; then
+                echo "api_key 或 api_secret 为空，终止执行后续操作。"
+                exit 0
+              fi
+
+              # 检查 ConfigMap middleware 是否存在
+              if kubectl get configmap middleware; then
+                echo "ConfigMap middleware already exists. Skipping wait."
+              else
+                echo "Waiting for ConfigMap middleware to be ready..."
+                kubectl wait --for=condition=Ready configmap/middleware --timeout=300s
+              fi
+
+              echo "Patching ConfigMap middleware..."
+              cat <<EOF > /tmp/emqx.yaml
+              data:
+                emqx.yaml: |
+                  mqtt:
+                    id: {{ .Values.mqtt.id | default "zerosecond" }}
+                    tcp: {{ .Values.emqx.address }}
+                    username: {{ .Values.mqtt.username }}
+                    password: {{ .Values.mqtt.password }}
+                    api: {{ .Values.emqx.apiAddress }}
+                    apiKey: ${api_key}
+                    apiSecret: ${api_secret}
+                    version: "5"
+              EOF
+              kubectl patch configmap middleware --patch-file=/tmp/emqx.yaml --type merge
+          volumeMounts:
+            - name: shared-data
+              mountPath: /tmp
+      initContainers:
+        - name: emqx-init
+          image: {{ .Values.global.curlImage }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              EMQX_API="http://{{ .Values.emqx.apiAddress }}"
+
+              # 等待 EMQX 服务启动完成
+              echo "Waiting for EMQX to be ready..."
+              until curl -sf ${EMQX_API}/api/v5/status; do
+                sleep 5
+              done
+
+              # 获取 token
+              echo "Creating token..."
+              TOKEN=$(curl -sS -X 'POST' \
+                "${EMQX_API}/api/v5/login" \
+                -H 'accept: application/json' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                "username": "admin",
+                "password": "{{ .Values.emqx.adminPassword }}"
+              }'| grep -o '"token":"[^"]*"' | awk -F'"' '{print $4}')
+
+              if [ -z "$TOKEN" ]; then
+                echo "Failed to retrieve token"
+                exit 1
+              fi
+
+              export TOKEN
+
+              # 创建 API key
+              echo "Creating API key..."
+              json_data=$(curl -sS -X 'POST' "${EMQX_API}/api/v5/api_key" \
+                --header 'Content-Type: application/json' \
+                --header "Authorization: Bearer $TOKEN" \
+                --data '{
+                  "name": "http",
+                  "enable": true,
+                  "expired": false,
+                  "desc": "api"
+                }')
+
+              # 提取 api_key
+              api_key=$(echo "$json_data" | grep -o '"api_key": *"[^"]*"' | sed 's/"api_key": *"\([^"]*\)"/\1/')
+
+              # 提取 api_secret
+              api_secret=$(echo "$json_data" | grep -o '"api_secret": *"[^"]*"' | sed 's/"api_secret": *"\([^"]*\)"/\1/')
+
+              # 将 api_key 和 api_secret 写入文件
+              echo "$api_key" > /tmp/api_key.txt
+              echo "$api_secret" > /tmp/api_secret.txt
+
+              # 创建规则 client_disconnected
+              echo "Creating rule for client_disconnected..."
+              curl -sS -X 'POST' "${EMQX_API}/api/v5/rules" \
+                --header 'Content-Type: application/json' \
+                --header "Authorization: Bearer $TOKEN" \
+                --data '{
+                    "id": "client_disconnected",
+                    "enable": true,
+                    "sql": "SELECT\n  clientid\nFROM\n  \"$events/client_disconnected\"",
+                    "actions": [
+                        {
+                            "args": {
+                                "retain": false,
+                                "payload": "${clientid}",
+                                "topic": "client_disconnected",
+                                "qos": 1
+                            },
+                            "function": "republish"
+                        }
+                    ]
+                }'
+
+              # 创建规则 client_connected
+              echo "Creating rule for client_connected..."
+              curl -sS -X 'POST' "${EMQX_API}/api/v5/rules" \
+                --header 'Content-Type: application/json' \
+                --header "Authorization: Bearer $TOKEN" \
+                --data '{
+                   "id": "client_connected",
+                   "enable": true,
+                   "sql": "SELECT\n  clientid\nFROM\n  \"$events/client_connected\"",
+                   "actions": [
+                       {
+                           "args": {
+                               "retain": false,
+                               "payload": "${clientid}",
+                               "topic": "client_connected",
+                               "qos": 1
+                           },
+                           "function": "republish"
+                       }
+                   ]
+                }'
+
+              # 创建规则 message_acked
+              echo "Creating rule message_acked..."
+              curl -sS -X 'POST' "${EMQX_API}/api/v5/rules" \
+                --header 'Content-Type: application/json' \
+                --header "Authorization: Bearer $TOKEN" \
+                --data '{
+                  "id": "message_acked",
+                  "enable": true,
+                  "sql": "SELECT\n  clientid,\n  last(split(payload, '\'':'\'', '\''trailing'\'')) as idx\nFROM\n  \"$events/message_acked\"\nWHERE\n  topic = clientid AND\n  (\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''rename'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''tip-message'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''message'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''uninstall'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''script'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''block'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''customLockDate'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''resetpassword'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''time-zone'\'' OR\n    first(split(payload, '\'':'\'', '\''leading'\'')) = '\''align'\''\n  )",
+
+                  "actions": [
+                      {
+                          "args": {
+                              "retain": false,
+                              "payload": "${clientid}:${idx}",
+                              "topic": "message_acked",
+                              "qos": 1
+                          },
+                          "function": "republish"
+                      }
+                  ]
+                }'
+
+          volumeMounts:
+            - name: shared-data
+              mountPath: /tmp
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+{{- end -}}
