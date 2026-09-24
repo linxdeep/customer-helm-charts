@@ -3,6 +3,17 @@ entries:
   uem:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-09-24T06:59:29.278652336Z"
+    description: A Helm chart for the UEM platform
+    digest: eef03b06e7b3c31d760e92054e89f210ad95b9ed723ade3dfb8ff198fbfb044e
+    kubeVersion: '>=1.26.0-0'
+    name: uem
+    type: application
+    urls:
+    - https://github.com/linxdeep/customer-helm-charts/releases/download/uem-6.8.0/uem-6.8.0.tgz
+    version: 6.8.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-09-24T06:41:33.334780067Z"
     description: A Helm chart for the UEM platform
     digest: 19ea745ed5f18ff8d9eab5296206b80cb508a7ae43b912222cfad96db639c2f9
@@ -12,4 +23,4 @@ entries:
     urls:
     - https://github.com/linxdeep/customer-helm-charts/releases/download/uem-6.7.0/uem-6.7.0.tgz
     version: 6.7.0
-generated: "2026-09-24T06:41:33.334785095Z"
+generated: "2026-09-24T06:59:29.278661312Z"
