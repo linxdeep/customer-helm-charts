@@ -3,6 +3,11 @@
 # operators in the cassandra/kafka/redis/emqx/elastic namespaces).
 # Copy, adjust and pass with: helm install uem charts/uem -f my-values.yaml
 
+global:
+  kubectlImage: "docker.io/bitnami/kubectl:latest"
+  curlImage: "docker.io/curlimages/curl:latest"
+  waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
+
 fullnameOverride: uem
 
 domain: "uem.example.com"
@@ -34,8 +39,9 @@ s3:
   domain: "https://files.example.com"
 
 # Elasticsearch deployed by the ECK operator (see eks-deploy-guide.md §12).
-# Password: kubectl get secret elasticsearch-es-elastic-user -n elastic \
-#   -o jsonpath='{.data.elastic}' | base64 -d
+# Obtain the password, then fill it in below:
+#   kubectl get secret elasticsearch-es-elastic-user -n elastic \
+#     -o jsonpath='{.data.elastic}' | base64 -d
 search:
   type: es
   deviceIndexPrefix: devices
@@ -43,7 +49,7 @@ search:
     addresses:
       - "https://elasticsearch-es-http.elastic.svc.cluster.local:9200"
     username: "elastic"
-    password: "<password-from-the-secret>"
+    password: "DPQKHnQndKmxjXIlSCM5vim2"
     insecureSkipVerify: true
     maxRetries: 3
     timeout: 10s
