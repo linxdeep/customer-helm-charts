@@ -3,44 +3,72 @@
 Elasticsearch stores the device search index. The `uemctl` post-install job
 creates the index templates; it needs a working endpoint and credentials.
 
+The example below is the tested setup from
+[examples/eks-deploy-guide.md](../examples/eks-deploy-guide.md) §12; the
+matching connection values are in [examples/values-full.yaml](../examples/values-full.yaml).
+
 ## Requirements
 
-- Elasticsearch 8.x / 9.x (9.x recommended)
+- Elasticsearch 8.x / 9.x (tested with 9.4.7)
 - HTTPS endpoint reachable from the cluster
 - Credentials with index-management rights
 
-## Recommended: ECK (Elastic Cloud on Kubernetes)
+## Option A: ECK (Elastic Cloud on Kubernetes, recommended)
 
-Install the [ECK operator](https://www.elastic.co/guide/en/cloud-on-k8s/current/index.html):
+Install the [ECK operator](https://www.elastic.co/guide/en/cloud-on-k8s/current/index.html)
+(tested via the Helm chart):
 
 ```bash
-# Use the latest 3.x ECK release (required for Elasticsearch 9.x)
-kubectl apply -f https://download.elastic.co/downloads/eck/3.1.0/crds.yaml
-kubectl apply -f https://download.elastic.co/downloads/eck/3.1.0/operator.yaml
+helm repo add elastic https://helm.elastic.co
+helm repo update
+helm install elastic-operator elastic/eck-operator \
+  --namespace elastic-system --create-namespace
 ```
 
-Create a cluster (minimal example):
+Create the cluster (tested example — namespace `elastic`, 3 combined nodes;
+the sysctl init container raises `vm.max_map_count`, which Elasticsearch
+requires):
 
 ```yaml
 apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
   name: elasticsearch
-  namespace: search
+  namespace: elastic
 spec:
-  version: 9.1.0
+  version: 9.4.7
   nodeSets:
-    - name: masters
+    - name: default
       count: 3
       config:
         node.roles: ["master", "data", "ingest"]
-        node.store.allow_mmap: false
+        xpack.security.enabled: true
+      podTemplate:
+        spec:
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  cpu: "2"
+                  memory: 8Gi
+                limits:
+                  cpu: "4"
+                  memory: 16Gi
+                env:
+                  - name: ES_JAVA_OPTS
+                    value: "-Xms4g -Xmx4g"
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
           spec:
+            storageClassName: gp3   # your storage class
             accessModes: [ReadWriteOnce]
-            storageClassName: <your-storage-class>
             resources:
               requests:
                 storage: 100Gi
@@ -49,7 +77,7 @@ spec:
 Wait until the cluster is green:
 
 ```bash
-kubectl -n search get elasticsearch -w
+kubectl -n elastic get elasticsearch -w
 ```
 
 ECK creates:
@@ -57,10 +85,10 @@ ECK creates:
 - Service `<name>-es-http` (port 9200)
 - Secret `<name>-es-elastic-user` with the `elastic` user password
 
-Read the password:
+Read the password and fill it into the values:
 
 ```bash
-kubectl -n search get secret elasticsearch-es-elastic-user \
+kubectl -n elastic get secret elasticsearch-es-elastic-user \
   -o jsonpath='{.data.elastic}' | base64 -d
 ```
 

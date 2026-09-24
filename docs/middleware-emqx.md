@@ -3,22 +3,106 @@
 All device communication goes through MQTT. EMQX must be deployed as a
 **cluster** (2+ core nodes recommended, 3 for production).
 
-**Supported versions: EMQX 5.7.x / 5.8.x — use the latest 5.8 patch release.**
+**Supported versions: EMQX 5.7.x / 5.8.x (tested with 5.7.2).**
 
-Deploying and operating the EMQX cluster is **out of scope for this
-repository** — provision it with whatever means your environment provides
-(vendor operator, helm chart, virtual appliance, managed service). This chart
-only connects to it:
+This chart connects to the externally deployed cluster:
 
 - `emqx.address` — MQTT listener, `host:port` (default port 1883)
 - `emqx.apiAddress` — management API, `host:port` (default port 18083)
 - `emqx.adminPassword` — dashboard admin password (used by the bootstrap job)
 - `mqtt.username` / `mqtt.password` — MQTT credentials the platform uses
 
+## Option A: EMQX Operator (recommended)
+
+The example below is the tested setup from
+[examples/eks-deploy-guide.md](../examples/eks-deploy-guide.md) §11; the
+matching connection values are in [examples/values-full.yaml](../examples/values-full.yaml).
+
+Install the operator (it requires cert-manager, see
+[middleware-cassandra.md](middleware-cassandra.md)):
+
+```bash
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
+
+helm install emqx-operator emqx/emqx-operator \
+  --namespace emqx-operator-system \
+  --create-namespace \
+  --set installCRDs=true \
+  --version 2.2.29
+```
+
+Create the cluster (tested example — namespace `emqx`, open-source `EMQX` CR,
+dashboard bound to 0.0.0.0:18083 so the API is reachable through the generated
+`emqx-dashboard` service):
+
+```yaml
+apiVersion: apps.emqx.io/v2beta1
+kind: EMQX
+metadata:
+  name: emqx
+  namespace: emqx
+spec:
+  image: emqx:5.7.2
+  config:
+    data: |
+      dashboard.listeners.http.bind = "0.0.0.0:18083"
+  coreTemplate:
+    spec:
+      replicas: 3
+      env:
+        - name: EMQX_DASHBOARD__LISTENERS__HTTP__BIND
+          value: "0.0.0.0:18083"
+      resources:
+        requests:
+          cpu: "1"
+          memory: 4Gi
+        limits:
+          cpu: "2"
+          memory: 8Gi
+      volumeClaimTemplates:
+        storageClassName: gp3   # your storage class
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+```
+
+Wait until the cluster is ready:
+
+```bash
+kubectl get emqx emqx -n emqx -w
+```
+
+The operator creates the `emqx-listeners` service (MQTT 1883 and friends) and
+the `emqx-dashboard` service (API 18083). Chart values (cross-namespace, as
+tested; `adminPassword: public` is the EMQX default — change it and the
+matching MQTT credentials for anything beyond testing):
+
 ```yaml
 emqx:
-  address: emqx:1883
-  apiAddress: emqx:18083
+  address: emqx-listeners.emqx.svc.cluster.local:1883
+  apiAddress: emqx-dashboard.emqx.svc.cluster.local:18083
+  adminPassword: "public"
+  bootstrap:
+    enabled: true
+mqtt:
+  username: admin
+  password: public
+```
+
+If your services are named differently, adjust `emqx.address` /
+`emqx.apiAddress` accordingly.
+
+## Option B: any external EMQX
+
+Any reachable EMQX 5.7.x / 5.8.x cluster works:
+
+```yaml
+emqx:
+  address: emqx.internal.example.com:1883
+  apiAddress: emqx.internal.example.com:18083
   adminPassword: "<dashboard admin password>"
   bootstrap:
     enabled: true
