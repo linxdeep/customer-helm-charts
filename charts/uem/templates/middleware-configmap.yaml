@@ -91,7 +91,7 @@ data:
     cronjob:
       server: http://cronjob
     {{- end }}
-    {{- if .Values.fileServer.enabled }}
+    {{- if .Values.file.enabled }}
     fileServer:
       server: http://file
     {{- end }}
@@ -99,7 +99,7 @@ data:
     proglove:
       server: http://proglove
     {{- end }}
-    {{- if .Values.printer.enabled }}
+    {{- if .Values.printerAgent.enabled }}
     printer:
       server: http://printer-agent
     {{- end }}

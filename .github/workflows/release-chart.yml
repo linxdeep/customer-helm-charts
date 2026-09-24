@@ -1,0 +1,49 @@
+# Packages charts under charts/ and publishes them as a Helm repository on
+# GitHub Pages (https://linxdeep.github.io/customer-helm-charts/).
+#
+# Release flow: bump `version` in charts/uem/Chart.yaml and push to main.
+# chart-releaser then creates a GitHub release `uem-<version>` with the .tgz
+# attached and redeploys index.yaml.
+name: Release Chart
+
+on:
+  push:
+    branches: [main]
+    paths: ["charts/**"]
+
+permissions:
+  contents: write # create GitHub releases with the chart archives
+  pages: write # deploy index.yaml to GitHub Pages
+  id-token: write # OIDC token for the Pages deployment
+
+concurrency:
+  group: release-chart
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # chart-releaser diffs against previous releases
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+
+      - name: Lint charts
+        run: helm lint charts/*
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

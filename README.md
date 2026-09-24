@@ -38,14 +38,25 @@ post-install `uemctl` job connects to all of it:
 
 ## Quick start
 
+Install from this Helm repository (served via GitHub Pages):
+
 ```bash
-# 1. Copy the example values and fill in your environment
-cp examples/values-full.yaml my-values.yaml
+helm repo add linxdeep https://linxdeep.github.io/customer-helm-charts/
+helm repo update
+
+# 1. Get the default values and fill in your environment
+helm show values linxdeep/uem > my-values.yaml
 
 # 2. Review mandatory settings (see the checklist below)
 vi my-values.yaml
 
 # 3. Install
+helm install uem linxdeep/uem -n uem --create-namespace -f my-values.yaml
+```
+
+Or, if you prefer to install straight from a checkout of this repository:
+
+```bash
 helm install uem charts/uem -n uem --create-namespace -f my-values.yaml
 
 # 4. Watch the initialization jobs complete, then check the pods
