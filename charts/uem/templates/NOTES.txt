@@ -1,10 +1,9 @@
-1. Watch the initialization jobs finish (they run automatically after install):
+1. Watch the initialization job finish (it runs automatically after install):
 
    kubectl get jobs -w
 
-   The "emqx" job provisions the EMQX API key and rules, then the "uemctl"
-   job runs schema migration, Kafka topic creation and tenant init. Application
-   pods wait for these jobs before starting.
+   The "uemctl" job runs schema migration, Kafka topic creation and tenant
+   init. Application pods wait for it before starting.
 
 2. If you did not enable the built-in Ingress, configure routing on your own
    ingress controller according to docs/ingress-routing.md. In summary:

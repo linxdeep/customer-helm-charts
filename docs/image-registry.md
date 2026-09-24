@@ -1,17 +1,31 @@
 # Pulling images from a private registry
 
-All images are referenced through two global settings:
+Service images default to the public ECR gallery (`public.ecr.aws/t2n1w8w5`,
+anonymous pulls). To serve them from your own registry instead:
 
 ```yaml
 global:
-  imageRegistry: "registry.example.com"   # prefix prepended to every image
+  imageRegistry: "registry.example.com"   # every image is pulled from here
   imagePullSecrets:
     - name: regcred                       # secret with the registry credentials
 ```
 
-Service images default to `uem/<service>` paths (see `charts/uem/values.yaml`),
-so with the example above the deployment pulls
-`registry.example.com/uem/bff:<tag>`.
+`global.imageRegistry` takes precedence over the per-service `image.registry`
+defaults, so your mirror must serve the **bare repository paths** — e.g.
+`registry.example.com/www:v6.7`, not
+`registry.example.com/public.ecr.aws/t2n1w8w5/www:v6.7`. If your registry uses
+nested paths, override the repositories per service instead:
+
+```yaml
+www:
+  image:
+    registry: "registry.example.com"
+    repository: "uem/www"
+```
+
+A single service can also be redirected without touching the global setting,
+and per-service `image.registry` always wins over the default (but not over
+`global.imageRegistry`).
 
 If your nodes can pull anonymously (public registry, or node-level
 credentials), omit `imagePullSecrets`.

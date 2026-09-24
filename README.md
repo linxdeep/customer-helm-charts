@@ -3,15 +3,14 @@
 Helm charts for deploying the UEM platform (application services only).
 
 All middleware — Cassandra, Redis, Kafka, EMQX and Elasticsearch — is deployed
-and managed **outside** this chart. Operator-based deployment examples and the
-required connection settings are documented under [`docs/`](docs/).
+and managed **outside** this chart. Deployment guides and the required
+connection settings are documented under [`docs/`](docs/).
 
 ## Repository layout
 
 ```
 charts/uem/    The UEM platform chart
 docs/          Middleware deployment guides and ingress routing rules
-examples/      Ready-to-adapt values files
 ```
 
 ## Prerequisites
@@ -73,8 +72,9 @@ kubectl -n uem get pods
 | `domain` | Public hostname of the console |
 | `license` | License string |
 | `db.*` | Cassandra address/keyspace/credentials |
-| `emqx.address`, `emqx.apiAddress`, `emqx.adminPassword` | EMQX cluster endpoints and dashboard password |
+| `emqx.address`, `emqx.apiAddress` | EMQX cluster endpoints |
 | `mqtt.username/password/external` | MQTT credentials and public host |
+| `mqtt.apiKey/apiSecret` | EMQX management API key — create it (and the required business rules) on the EMQX cluster **before** installing, see [docs/middleware-emqx.md](docs/middleware-emqx.md) |
 | `redis.addr` | `host:port` of Redis |
 | `kafka.brokerList` | Kafka bootstrap servers |
 | `search.es.*` | Elasticsearch endpoint and credentials |
@@ -93,18 +93,11 @@ outside Kubernetes (see [docs/ingress-routing.md](docs/ingress-routing.md)).
 
 ## Upgrade notes
 
-After the first installation, the `emqx` post-install job creates an EMQX API
-key and writes it into the `middleware` ConfigMap. Because Helm resets the
-ConfigMap on every upgrade, **copy the generated `apiKey`/`apiSecret` into your
-values file** (`mqtt.apiKey` / `mqtt.apiSecret`) once the first install
-succeeds:
-
-```bash
-kubectl -n uem get configmap middleware -o jsonpath='{.data.emqx\.yaml}'
-```
-
-Alternatively, pre-provision the API key yourself in EMQX and set
-`emqx.bootstrap.enabled=false` together with `mqtt.apiKey`/`mqtt.apiSecret`.
+The EMQX API key and business rules are **not managed by this chart**. Create
+them on the EMQX cluster as described in
+[docs/middleware-emqx.md](docs/middleware-emqx.md) and keep the resulting
+`mqtt.apiKey` / `mqtt.apiSecret` in your values file — the `middleware`
+ConfigMap is rendered from your values on every upgrade.
 
 ## Monitoring (optional)
 

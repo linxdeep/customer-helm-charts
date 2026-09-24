@@ -61,13 +61,17 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Container image with optional global registry prefix.
+Container image reference. Registry resolution order:
+global.imageRegistry > <service>.image.registry > repository as-is.
+Setting global.imageRegistry redirects every image to that registry, so
+mirrors must serve the bare repository paths (e.g. <registry>/www).
 Expects a dict: (dict "root" $ "image" .Values.<svc>.image)
 */}}
 {{- define "uem.image" -}}
 {{- $tag := .image.tag | default .root.Chart.AppVersion -}}
-{{- if .root.Values.global.imageRegistry -}}
-{{ .root.Values.global.imageRegistry }}/{{ .image.repository }}:{{ $tag }}
+{{- $registry := .root.Values.global.imageRegistry | default .image.registry -}}
+{{- if $registry -}}
+{{ $registry }}/{{ .image.repository }}:{{ $tag }}
 {{- else -}}
 {{ .image.repository }}:{{ $tag }}
 {{- end -}}
@@ -96,18 +100,6 @@ initContainers:
     args: [ "pod", "-lapp.kubernetes.io/name=devices" ]
 {{- end }}
 {{- end -}}
-
-{{/*
-Wait for the emqx post-install configuration job to finish
-*/}}
-{{ define "wait-for-emqx" -}}
-{{- if .Values.emqx.bootstrap.enabled }}
-initContainers:
-  - name: wait-for-emqx
-    image: {{ .Values.global.waitForImage }}
-    args: ["job", "-lbatch.kubernetes.io/name=emqx"]
-{{- end }}
-{{- end }}
 
 {{/*
 Wait for the uemctl initialization job to finish

@@ -21,7 +21,6 @@ spec:
       labels:
         {{- include "uem.bffSelectorLabels" . | nindent 8 }}
     spec:
-      {{- include "wait-for-emqx" . | nindent 6 }}
       {{- include "uem.imagePullSecrets" (dict "root" $ "imagePullSecrets" .Values.bff.imagePullSecrets) | nindent 6 }}
       {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
       securityContext:

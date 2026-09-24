@@ -6,15 +6,15 @@
 
 # -- Global settings applied to every service.
 global:
-  # -- Optional registry prefix prepended to every image, e.g. "registry.example.com".
-  # Service images below are then referenced as <registry>/<repository>:<tag>.
+  # -- Optional registry serving every image, e.g. "registry.example.com".
+  # Takes precedence over the per-service image.registry defaults below, so
+  # your mirror must serve the bare repository paths (e.g. <registry>/www).
+  # Leave empty to pull the published images from public.ecr.aws directly.
   imageRegistry: ""
   # -- Pull secrets merged into every pod. Example: [{ name: regcred }]
   imagePullSecrets: []
   # -- Image used by init containers that need kubectl.
   kubectlImage: "docker.io/bitnami/kubectl:latest"
-  # -- Image used by the EMQX bootstrap job (curl).
-  curlImage: "docker.io/curlimages/curl:latest"
   # -- Image used by init containers waiting on other resources.
   waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
 
@@ -126,19 +126,14 @@ mqtt:
   tcpPort: "1883"
   sslPort: "8883"
 
-# -- EMQX cluster connection. EMQX itself is deployed outside this chart
-# (see docs/middleware-emqx.md).
+# -- EMQX cluster connection. EMQX itself is deployed and configured outside
+# this chart (see docs/middleware-emqx.md), including the API key and business
+# rules the platform needs (mqtt.apiKey / mqtt.apiSecret).
 emqx:
   # -- MQTT listener of the EMQX cluster, host:port, e.g. emqx:1883
   address: "emqx:1883"
   # -- Management API of the EMQX cluster, host:port, e.g. emqx:18083
   apiAddress: "emqx:18083"
-  # -- Dashboard admin password of the EMQX cluster. Must match the password
-  # configured when the cluster was deployed.
-  adminPassword: ""
-  bootstrap:
-    # -- Post-install job that provisions the EMQX API key and business rules.
-    enabled: true
 
 # -- Partner portal server advertised to clients.
 partner:
@@ -203,7 +198,8 @@ ae:
   logLevel: info
   metrics: false
   image:
-    repository: "public.ecr.aws/t2n1w8w5/ae"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "ae"
     pullPolicy: IfNotPresent
     tag: "v6.7"
   imagePullSecrets: []
@@ -238,7 +234,8 @@ apple:
   logLevel: info
   metrics: false
   image:
-    repository: "public.ecr.aws/t2n1w8w5/apple"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "apple"
     pullPolicy: IfNotPresent
     tag: "v6.7"
   imagePullSecrets: []
@@ -277,7 +274,8 @@ bff:
   theme: ""
   culture: "en-US"
   image:
-    repository: "public.ecr.aws/t2n1w8w5/bff"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "bff"
     pullPolicy: IfNotPresent
     tag: "v6.7"
   imagePullSecrets: []
@@ -313,7 +311,8 @@ devices:
   hookLog: false
   metrics: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/devices"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "devices"
     pullPolicy: IfNotPresent
     tag: "v1.7"
   imagePullSecrets: []
@@ -353,7 +352,8 @@ cronjob:
   logLevel: info
   metrics: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/cronjob"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "cronjob"
     pullPolicy: IfNotPresent
     tag: "v1.7"
   imagePullSecrets: []
@@ -390,7 +390,8 @@ processor:
   logLevel: info
   metrics: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/processor"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "processor"
     pullPolicy: IfNotPresent
     tag: "v1.7"
   imagePullSecrets: []
@@ -423,7 +424,8 @@ www:
   enabled: true
   replicaCount: 3
   image:
-    repository: "public.ecr.aws/t2n1w8w5/www"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "www"
     pullPolicy: IfNotPresent
     tag: "v6.7"
   imagePullSecrets: []
@@ -489,7 +491,8 @@ windows:
 uemctl:
   enabled: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/uemctl"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "uemctl"
     pullPolicy: IfNotPresent
     tag: "v2.7"
   podAnnotations: {}
@@ -513,7 +516,8 @@ file:
   metrics: true
   cdn: ""
   image:
-    repository: "public.ecr.aws/t2n1w8w5/fileserver"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "fileserver"
     pullPolicy: IfNotPresent
     tag: "v6.0"
   imagePullSecrets: []
@@ -555,7 +559,8 @@ remoteProxy:
   logLevel: info
   metrics: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/remote-proxy"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "remote-proxy"
     pullPolicy: IfNotPresent
     tag: "v2.1"
   imagePullSecrets: []
@@ -590,7 +595,8 @@ deviceStats:
   logLevel: info
   metrics: true
   image:
-    repository: "public.ecr.aws/t2n1w8w5/device-stats"
+    registry: "public.ecr.aws/t2n1w8w5"
+    repository: "device-stats"
     pullPolicy: IfNotPresent
     tag: "v2.2"
   imagePullSecrets: []

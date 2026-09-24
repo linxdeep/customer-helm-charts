@@ -25,7 +25,6 @@ spec:
       {{/*      serviceAccountName: {{ include "helm-charts.serviceAccountName" . }}*/}}
       securityContext:
         {{- toYaml .Values.deviceStats.podSecurityContext | nindent 8 }}
-      {{- include "wait-for-emqx" . | nindent 6 }}
       containers:
         - name: {{- include "uem.deviceStatsFullname" . }}
           securityContext:

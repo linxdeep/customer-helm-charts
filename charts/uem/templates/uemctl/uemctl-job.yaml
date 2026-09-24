@@ -6,8 +6,7 @@ metadata:
   labels:
     {{- include "uem.labels" . | nindent 4 }}
   annotations:
-    # Runs after all release resources exist (post-install/post-upgrade) and
-    # after the emqx bootstrap job (lower hook weight runs first).
+    # Runs after all release resources exist (post-install/post-upgrade).
     helm.sh/hook: post-install, post-upgrade
     helm.sh/hook-weight: "0"
     helm.sh/hook-delete-policy: before-hook-creation
@@ -26,7 +25,6 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.uemctl.podSecurityContext | nindent 8 }}
-      {{- include "wait-for-emqx" . | nindent 6 }}
       containers:
         - name: uemctl
           securityContext:
