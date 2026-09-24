@@ -11,6 +11,7 @@ connection settings are documented under [`docs/`](docs/).
 ```
 charts/uem/    The UEM platform chart
 docs/          Middleware deployment guides and ingress routing rules
+examples/      Tested values file and a full EKS reference deployment guide
 ```
 
 ## Prerequisites
@@ -53,15 +54,26 @@ vi my-values.yaml
 helm install uem linxdeep/uem -n uem --create-namespace -f my-values.yaml
 ```
 
-Or, if you prefer to install straight from a checkout of this repository:
+From a checkout of this repository, start from the tested example instead:
 
 ```bash
+# 1. Start from the example values (aligned with the reference guide below)
+cp examples/values-full.yaml my-values.yaml
+vi my-values.yaml
+
+# 2. Install
 helm install uem charts/uem -n uem --create-namespace -f my-values.yaml
 
-# 4. Watch the initialization jobs complete, then check the pods
+# 3. Watch the initialization jobs complete, then check the pods
 kubectl -n uem get jobs -w
 kubectl -n uem get pods
 ```
+
+A complete, tested end-to-end reference — EKS cluster, node groups, gp3
+storage class and all middleware (Cassandra, Kafka, Redis, EMQX,
+Elasticsearch) deployed with operators, plus teardown — is documented in
+[examples/eks-deploy-guide.md](examples/eks-deploy-guide.md). The connection
+values in `examples/values-full.yaml` match that environment.
 
 ### Mandatory settings checklist
 

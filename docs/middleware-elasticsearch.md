@@ -73,7 +73,7 @@ search:
   deviceIndexPrefix: devices
   es:
     addresses:
-      - https://elasticsearch-es-http.search.svc.cluster.local:9200
+      - https://elasticsearch-es-http.elastic.svc.cluster.local:9200
     username: elastic
     password: <password-from-the-secret>
     insecureSkipVerify: true
@@ -100,5 +100,5 @@ search:
 ```bash
 kubectl run es-check --rm -it --image=curlimages/curl:8.11.1 --restart=Never -- \
   curl -sk -u 'elastic:<password>' \
-  https://elasticsearch-es-http.search:9200/_cluster/health
+  https://elasticsearch-es-http.elastic.svc.cluster.local:9200/_cluster/health
 ```

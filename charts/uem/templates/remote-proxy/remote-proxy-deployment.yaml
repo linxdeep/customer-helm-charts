@@ -59,12 +59,16 @@ spec:
             - mountPath: /data/conf/config.yaml
               subPath: config.yaml
               name: config
+            {{- include "middleware-config" . | nindent 10 }}
           resources:
             {{- toYaml .Values.remoteProxy.resources | nindent 12 }}
       volumes:
         - name: config
           configMap:
             name: {{- include "uem.remoteProxyFullname" . }}
+        - name: middleware-config
+          configMap:
+            name: middleware
       {{- with .Values.remoteProxy.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -1,0 +1,135 @@
+# Complete example values for the uem chart, aligned with the reference
+# environment in examples/eks-deploy-guide.md (middleware deployed with
+# operators in the cassandra/kafka/redis/emqx/elastic namespaces).
+# Copy, adjust and pass with: helm install uem charts/uem -f my-values.yaml
+
+fullnameOverride: uem
+
+domain: "uem.example.com"
+license: "test"
+
+pvc:
+  enabled: true
+  storage: 16Gi
+  storageClass: ""   # empty = cluster default (gp3 in the reference guide)
+
+email:
+  smtp: "smtp.example.com"
+  port: 465
+  username: "uem@example.com"
+  password: "<smtp-password>"
+
+otel:
+  enable: false
+  endpoint: ""
+  insecure: true
+  protocol: grpc
+
+s3:
+  enabled: true
+  region: "us-east-1"
+  accessKey: "<access-key>"
+  secretKey: "<secret-key>"
+  bucketName: "uem-files"
+  domain: "https://files.example.com"
+
+# Elasticsearch deployed by the ECK operator (see eks-deploy-guide.md §12).
+# Password: kubectl get secret elasticsearch-es-elastic-user -n elastic \
+#   -o jsonpath='{.data.elastic}' | base64 -d
+search:
+  type: es
+  deviceIndexPrefix: devices
+  es:
+    addresses:
+      - "https://elasticsearch-es-http.elastic.svc.cluster.local:9200"
+    username: "elastic"
+    password: "<password-from-the-secret>"
+    insecureSkipVerify: true
+    maxRetries: 3
+    timeout: 10s
+
+# RedisCluster deployed by the OT-Container-Kit operator (§10).
+redis:
+  cluster: true
+  addr: "redis-cluster-leader-headless.redis.svc.cluster.local:6379,redis-cluster-follower-headless.redis.svc.cluster.local:6379"
+
+# Kafka deployed by the Strimzi operator (§9).
+kafka:
+  enabled: true
+  brokerList:
+    - "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  groupId: "uem"
+
+# Cassandra deployed by the K8ssandra operator (§8), user created in §8.3.
+db:
+  address: "cassandra-dc1-service.cassandra.svc.cluster.local:9042"
+  pool: 2
+  timeout: 60
+  keyspace: "uem"
+  username: "uemdb"
+  password: "<cassandra-password>"
+  replication: 3
+  keyspaceClass:
+    keyspaceClass: NetworkTopologyStrategy
+    dataCenters:
+      - dc1: "3"
+
+# EMQX deployed by the EMQX operator (§11): the listener service carries the
+# MQTT port, the dashboard service the management API. adminPassword must
+# match the dashboard password of that cluster.
+mqtt:
+  username: "admin"
+  password: "public"
+  version: 5
+  external: "mqtt.example.com"
+  tcpPort: "1883"
+  sslPort: "8883"
+  # The bootstrap job fills these in on first install; copy the generated
+  # values here afterwards (see the upgrade notes in the README).
+  apiKey: ""
+  apiSecret: ""
+
+emqx:
+  address: "emqx-listeners.emqx.svc.cluster.local:1883"
+  apiAddress: "emqx-dashboard.emqx.svc.cluster.local:18083"
+  adminPassword: "public"
+  bootstrap:
+    enabled: true
+
+partner:
+  server: "https://partner.example.com"
+
+http:
+  lbMode: true
+  ginMode: release
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  tls:
+    - secretName: uem-tls
+      hosts: [uem.example.com]
+  attachmentRoute:
+    enabled: false
+  grpc:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+
+monitoring:
+  enabled: false
+  labels: {}
+    # release: kube-prometheus-stack
+
+# STUN/TURN must be hosted OUTSIDE Kubernetes (see docs/ingress-routing.md)
+remoteProxy:
+  stun:
+    - "stun:stun.sipnet.ru:3478"
+
+bff:
+  title: "UEM Console"
+  theme: "default"
+  culture: "en-US"

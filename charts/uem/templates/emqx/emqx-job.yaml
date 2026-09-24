@@ -4,7 +4,7 @@ kind: Job
 metadata:
   name: emqx
   labels:
-    {{- include "uem.labels" . | nindent 4 }}
+    {{- include "uem.emqxJobLabels" . | nindent 4 }}
   annotations:
     # Runs after all release resources exist. The uemctl job waits for this job
     # to complete (see wait-for-emqx in _helpers.tpl).
@@ -19,7 +19,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "uem.labels" . | nindent 8 }}
+        {{- include "uem.emqxJobLabels" . | nindent 8 }}
     spec:
       serviceAccountName: emqx-sa
       restartPolicy: Never

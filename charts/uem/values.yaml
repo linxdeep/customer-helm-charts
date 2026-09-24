@@ -110,10 +110,10 @@ db:
   keyspaceClass:
     # The class of the keyspace, e.g. SimpleStrategy, NetworkTopologyStrategy
     keyspaceClass: SimpleStrategy
-    # dataCenter: A map of data centers and their replication factor.
-    # It is only used when keyspaceClass is NetworkTopologyStrategy.
-    # dataCenter:
-    #  -dc1: 3
+  # dataCenters: A list of data centers and their replication factor.
+  # It is only used when keyspaceClass is NetworkTopologyStrategy.
+    dataCenters:
+      - dc1: "3"
 
 # -- MQTT settings (credentials for the externally deployed EMQX cluster).
 mqtt:

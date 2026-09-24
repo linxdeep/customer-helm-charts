@@ -17,12 +17,6 @@ data:
       timeout: 10s
       external: https://{{ .Values.domain }}:443
 
-    mqtt:
-      id: zerosecond
-      tcp: emqx:1883
-      username: {{ .Values.mqtt.username }}
-      password: {{ .Values.mqtt.password }}
-
     ltCred:
       stun:
 {{- range .Values.remoteProxy.stun }}
