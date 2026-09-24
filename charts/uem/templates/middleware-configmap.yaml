@@ -59,46 +59,50 @@ data:
       cluster: {{ .Values.redis.cluster }}
 
   server.yaml: |
+    {{- if .Values.ae.enabled }}
     ae:
       server: http://ae
-
+    {{- end }}
+    {{- if .Values.apple.enabled }}
     apple:
       server: http://apple
-
+    {{- end }}
+    {{- if .Values.remoteProxy.enabled }}
     remoteProxy:
       server: http://remote-proxy
-
+    {{- end }}
+    {{- if .Values.deviceStats.enabled }}
     deviceStats:
       server: http://device-stats
-
+    {{- end }}
+    {{- if .Values.partner.enabled }}
     partner:
       server: {{ .Values.partner.server }}
-
+    {{- end }}
+    {{- if .Values.windows.enabled }}
     windows:
       server: http://windows
-
+    {{- end }}
+    {{- if .Values.devices.enabled }}
     devices:
       server: http://devices
-
+    {{- end }}
+    {{- if .Values.cronjob.enabled }}
     cronjob:
       server: http://cronjob
-
+    {{- end }}
+    {{- if .Values.fileServer.enabled }}
     fileServer:
       server: http://file
-
+    {{- end }}
+    {{- if .Values.proglove.enabled }}
     proglove:
       server: http://proglove
-
+    {{- end }}
+    {{- if .Values.printer.enabled }}
     printer:
       server: http://printer-agent
-
-    logsParse:
-      server: http://logs-parse:8081
-
-    ai:
-      server: {{ .Values.ai.server }}
-      headers:
-        {{- .Values.ai.headers | toYaml | nindent 8 }}
+    {{- end }}
 
   search.yaml: |
     search:

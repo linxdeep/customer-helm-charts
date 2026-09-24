@@ -21,7 +21,8 @@ examples/      Ready-to-adapt values files
 - Middleware up and running (see the deployment order below)
 - A StorageClass (if you enable the shared PVC), see `pvc.storageClass`
 - An ingress controller of your choice (see [docs/ingress-routing.md](docs/ingress-routing.md))
-- Container images reachable from the cluster (see `global.imageRegistry`)
+- Container images reachable from the cluster (see
+  [docs/image-registry.md](docs/image-registry.md))
 
 ## Deployment order
 

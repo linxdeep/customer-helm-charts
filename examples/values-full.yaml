@@ -3,8 +3,6 @@
 
 global:
   imageRegistry: "registry.example.com"     # your registry hosting the UEM images
-  imagePullSecrets:
-    - name: regcred
   kubectlImage: "docker.io/bitnami/kubectl:latest"
   curlImage: "docker.io/curlimages/curl:latest"
   waitForImage: "ghcr.io/groundnuty/k8s-wait-for:v2.0"
@@ -12,7 +10,7 @@ global:
 fullnameOverride: uem
 
 domain: "uem.example.com"
-license: "<your-license>"
+license: "test"
 
 pvc:
   enabled: true
@@ -46,28 +44,30 @@ search:
     addresses:
       - "https://elasticsearch-es-http.search.svc.cluster.local:9200"
     username: "elastic"
-    password: "<es-password>"
+    password: "DPQKHnQndKmxjXIlSCM5vim2"
     insecureSkipVerify: true
     maxRetries: 3
     timeout: 10s
 
 redis:
-  addr: "redis:6379"
-  cluster: false
+  cluster: true
+  addr: "redis-cluster-leader-headless.redis.svc.cluster.local:6379,redis-cluster-follower-headless.redis.svc.cluster.local:6379"
+  readTimeout: 1s
+  writeTimeout: 1s
 
 kafka:
   enabled: true
   brokerList:
-    - "uem-kafka-bootstrap.kafka.svc.cluster.local:9092"
+    - "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
   groupId: "uem"
 
 db:
-  address: "uem-cluster-dc1-service.cassandra.svc.cluster.local:9042"
+  address: "cassandra-dc1-service.cassandra.svc.cluster.local:9042"
   pool: 2
   timeout: 60
   keyspace: "uem"
   username: "uemdb"
-  password: "<cassandra-password>"
+  password: "Welcome1234"
   replication: 3
   keyspaceClass:
     keyspaceClass: NetworkTopologyStrategy
@@ -79,16 +79,17 @@ mqtt:
   password: "<mqtt-password>"
   version: 5
   external: "mqtt.example.com"
-  tcpPort: "1883"
+  tcp: "1883"
   sslPort: "8883"
   # After the first install, copy the generated values here (see README).
   apiKey: ""
   apiSecret: ""
+  apiAddress: "http://emqx-dashboard.emqx.svc.cluster.local:18083"
 
 emqx:
-  address: "emqx:1883"
-  apiAddress: "emqx:18083"
-  adminPassword: "<emqx-dashboard-admin-password>"
+  address: "emqx-listeners.emqx.svc.cluster.local:1883"
+  apiAddress: "http://emqx-dashboard.emqx.svc.cluster.local:18083"
+  adminPassword: "public"
   bootstrap:
     enabled: true
 
@@ -120,22 +121,10 @@ monitoring:
   labels: {}
     # release: kube-prometheus-stack
 
-ai:
-  server: ""
-  headers: {}
-
-# Application services: adjust replicas/resources to your load.
-# Every service supports: replicaCount, image.tag, resources, nodeSelector,
-# tolerations, affinity (see charts/uem/values.yaml for all defaults).
-processor:
-  replicaCount: 3
-
 remoteProxy:
   # STUN/TURN must be hosted OUTSIDE Kubernetes (see docs/ingress-routing.md)
   stun:
-    - "stun:stun.example.com:3478"
-  turn:
-    - turn: "turn:turn.example.com:3479"
+    - "stun:stun.sipnet.ru:3478"
 
 bff:
   title: "UEM Console"

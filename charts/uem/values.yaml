@@ -25,7 +25,7 @@ fullnameOverride: uem
 domain: ""
 
 # -- License string.
-license: ""
+license: "default"
 
 # -- Shared persistent volume for the file service and device uploads.
 pvc:
@@ -115,7 +115,7 @@ db:
 
 # -- MQTT settings (credentials for the externally deployed EMQX cluster).
 mqtt:
-  id: ""
+  id: "uem"
   username: ""
   password: ""
   version: 5
@@ -196,16 +196,16 @@ ai:
 # -----------------------------------------------------------------------------
 
 ae:
-  enabled: true
+  enabled: false
   replicaCount: 1
   # -- iOS kiosk app bundle identifier.
   kiosk: "com.safeuem.aekiosk"
   logLevel: info
-  metrics: true
+  metrics: false
   image:
-    repository: "uem/ae"
+    repository: "public.ecr.aws/t2n1w8w5/ae"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v6.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -233,14 +233,14 @@ ae:
   affinity: {}
 
 apple:
-  enabled: true
+  enabled: false
   replicaCount: 1
   logLevel: info
-  metrics: true
+  metrics: false
   image:
-    repository: "uem/apple"
+    repository: "public.ecr.aws/t2n1w8w5/apple"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v6.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -269,7 +269,7 @@ apple:
 
 bff:
   enabled: true
-  replicaCount: 1
+  replicaCount: 3
   logLevel: info
   for: "usa"
   # -- Console title and theme shown to end users.
@@ -277,9 +277,9 @@ bff:
   theme: ""
   culture: "en-US"
   image:
-    repository: "uem/bff"
+    repository: "public.ecr.aws/t2n1w8w5/bff"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v6.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -308,14 +308,14 @@ bff:
 
 devices:
   enabled: true
-  replicaCount: 1
+  replicaCount: 3
   logLevel: info
   hookLog: false
   metrics: true
   image:
-    repository: "uem/devices"
+    repository: "public.ecr.aws/t2n1w8w5/devices"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v1.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -349,13 +349,13 @@ cronjob:
   battery: "0 1 * * *"
   collection: "0 2 * * *"
   dailyStats: "0 0 * * *"
-  replicaCount: 1
+  replicaCount: 3
   logLevel: info
   metrics: true
   image:
-    repository: "uem/cronjob"
+    repository: "public.ecr.aws/t2n1w8w5/cronjob"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v1.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -385,13 +385,14 @@ cronjob:
 processor:
   enabled: true
   maxPolicy: 10
+  # -- Number of processor pods. Keep it consistent with Kafka topic partition count to improve consumption speed; if it exceeds the Kafka partition count, some pods will be idle.
   replicaCount: 3
   logLevel: info
   metrics: true
   image:
-    repository: "uem/processor"
+    repository: "public.ecr.aws/t2n1w8w5/processor"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v1.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -420,11 +421,11 @@ processor:
 
 www:
   enabled: true
-  replicaCount: 1
+  replicaCount: 3
   image:
-    repository: "uem/www"
+    repository: "public.ecr.aws/t2n1w8w5/www"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v6.7"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext: {}
@@ -449,12 +450,12 @@ www:
   affinity: {}
 
 windows:
-  enabled: true
+  enabled: false
   replicaCount: 1
   logLevel: info
   metrics: true
   image:
-    repository: "uem/windows"
+    repository: ""
     pullPolicy: IfNotPresent
     tag: ""
   imagePullSecrets: []
@@ -488,9 +489,9 @@ windows:
 uemctl:
   enabled: true
   image:
-    repository: "uem/uemctl"
+    repository: "public.ecr.aws/t2n1w8w5/uemctl"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v2.7"
   podAnnotations: {}
   podSecurityContext: {}
   securityContext: {}
@@ -507,14 +508,14 @@ uemctl:
 
 file:
   enabled: true
-  replicaCount: 1
+  replicaCount: 3
   logLevel: info
   metrics: true
   cdn: ""
   image:
-    repository: "uem/fileserver"
+    repository: "public.ecr.aws/t2n1w8w5/fileserver"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v6.0"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -554,9 +555,9 @@ remoteProxy:
   logLevel: info
   metrics: true
   image:
-    repository: "uem/remote-proxy"
+    repository: "public.ecr.aws/t2n1w8w5/remote-proxy"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v2.1"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -585,13 +586,13 @@ remoteProxy:
 
 deviceStats:
   enabled: true
-  replicaCount: 1
+  replicaCount: 3
   logLevel: info
   metrics: true
   image:
-    repository: "uem/device-stats"
+    repository: "public.ecr.aws/t2n1w8w5/device-stats"
     pullPolicy: IfNotPresent
-    tag: ""
+    tag: "v2.2"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext:
@@ -619,7 +620,7 @@ deviceStats:
   affinity: {}
 
 proglove:
-  enabled: true
+  enabled: false
   replicaCount: 1
   logLevel: info
   metrics: true
@@ -654,7 +655,7 @@ proglove:
   affinity: {}
 
 printerAgent:
-  enabled: true
+  enabled: false
   replicaCount: 1
   logLevel: info
   metrics: true
