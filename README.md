@@ -42,13 +42,13 @@ Install from the OCI registry (public AWS ECR, no repository setup needed):
 
 ```bash
 # 1. Get the default values and fill in your environment
-helm show values oci://public.ecr.aws/uem/helm-charts/uem > my-values.yaml
+helm show values oci://public.ecr.aws/uem/helm-charts > my-values.yaml
 
 # 2. Review mandatory settings (see the checklist below)
 vi my-values.yaml
 
 # 3. Install (pin the chart version you verified)
-helm install uem oci://public.ecr.aws/uem/helm-charts/uem --version 6.7.0 \
+helm install uem oci://public.ecr.aws/uem/helm-charts --version 6.7.0 \
   -n uem --create-namespace -f my-values.yaml
 ```
 

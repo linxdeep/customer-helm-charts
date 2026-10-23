@@ -78,4 +78,21 @@ jobs:
       - name: Push chart
         if: steps.released.outputs.exists == 'false'
         run: |
-          helm push "uem-${{ steps.package.outputs.version }}.tgz" "oci://${REGISTRY}/${ALIAS}/${REPOSITORY}"
+          VERSION="${{ steps.package.outputs.version }}"
+          # helm push would append the chart name to the OCI path and land in
+          # repository helm-charts/uem. oras pushes into the exact repository
+          # with a helm-compatible OCI manifest instead.
+          curl -sSL "https://github.com/oras-project/oras/releases/download/v1.3.5/oras_1.3.5_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin oras
+          python3 - <<'PY'
+          import json, yaml
+          m = yaml.safe_load(open('charts/uem/Chart.yaml'))
+          cfg = {k: m[k] for k in ('name', 'version', 'description', 'apiVersion', 'appVersion', 'type', 'kubeVersion') if k in m}
+          ann = {'org.opencontainers.image.title': m['name'], 'org.opencontainers.image.version': m['version'], 'org.opencontainers.image.description': m.get('description', '')}
+          open('config.json', 'w').write(json.dumps(cfg, separators=(',', ':')))
+          open('annotations.json', 'w').write(json.dumps(ann))
+          PY
+          oras push "${REGISTRY}/${ALIAS}/${REPOSITORY}:${VERSION}" \
+            --config "config.json:application/vnd.cncf.helm.config.v1+json" \
+            --annotation-file annotations.json \
+            "uem-${VERSION}.tgz:application/vnd.cncf.helm.chart.content.v1.tar+gzip"
