@@ -27,7 +27,7 @@ concurrency:
 
 env:
   REGISTRY: public.ecr.aws
-  REPOSITORY: helm-charts
+  REPOSITORY: uem/helm-charts 
   ROLE_ARN: arn:aws:iam::068002804222:role/helm-charts
 
 jobs:
