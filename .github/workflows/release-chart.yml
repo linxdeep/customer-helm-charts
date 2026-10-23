@@ -44,14 +44,6 @@ jobs:
       - name: Lint charts
         run: helm lint charts/*
 
-      - name: Debug OIDC token claims (temporary)
-        run: |
-          IDTOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          echo "$IDTOKEN" | cut -d'.' -f2 | python3 -c \
-            "import sys,base64,json; d=sys.stdin.read().strip(); d+='='*(-len(d)%4); print(json.dumps(json.loads(base64.urlsafe_b64decode(d)), indent=2))" \
-            | grep -E '"(sub|aud|iss|repository)"'
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
