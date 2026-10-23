@@ -171,6 +171,12 @@ ingress:
     # -- Separate Ingress for the remote-proxy gRPC endpoint. Requires an
     # ingress controller with gRPC support.
     enabled: false
+    # -- Path matcher for the remote-proxy gRPC service. The default is a
+    # regex matching the service's full proto name regardless of its proto
+    # package; it is rendered with pathType ImplementationSpecific and the
+    # nginx use-regex annotation is added automatically. Override with the
+    # exact path on controllers without regex Ingress path support.
+    path: '/[a-z]+\.remote\.proxy\.v1\.RemoteProxy(/|$)'
     # Example for nginx:
     #   nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
     annotations: {}

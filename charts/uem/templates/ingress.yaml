@@ -165,10 +165,11 @@ metadata:
   name: grpc-ingress
   labels:
     {{- include "uem.labels" . | nindent 4 }}
-  {{- with .Values.ingress.grpc.annotations }}
+  {{/* The default path is a regex: nginx needs use-regex to honor it.
+       User annotations take precedence over the injected default. */}}
+  {{- $ann := mergeOverwrite (dict "nginx.ingress.kubernetes.io/use-regex" "true") (.Values.ingress.grpc.annotations | default dict) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- toYaml $ann | nindent 4 }}
 spec:
   {{- with .Values.ingress.className }}
   ingressClassName: {{ . }}
@@ -182,8 +183,8 @@ spec:
     - host: {{ $host | quote }}
       http:
         paths:
-          - path: /linxdeep.remote.proxy.v1.RemoteProxy
-            pathType: Prefix
+          - path: {{ $.Values.ingress.grpc.path | default `/[a-z]+\.remote\.proxy\.v1\.RemoteProxy(/|$)` | quote }}
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: remote-proxy

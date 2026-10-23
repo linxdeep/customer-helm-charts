@@ -49,10 +49,16 @@ snippets).
 
 | Path | Service : Port | Protocol |
 |---|---|---|
-| `/linxdeep.remote.proxy.v1.RemoteProxy` | `remote-proxy : 9099` | gRPC (h2c) |
+| `/<package>.remote.proxy.v1.RemoteProxy` | `remote-proxy : 9099` | gRPC (h2c) |
 
-The chart can generate a separate Ingress for this (`ingress.grpc.enabled`)
-which needs a gRPC-capable controller.
+The path is the remote-proxy gRPC service's full proto name; `<package>` is
+its proto package. So that no environment has to pin it by hand, the
+generated Ingress matches it with the regex
+`/[a-z]+\.remote\.proxy\.v1\.RemoteProxy(/|$)` — rendered as
+`pathType: ImplementationSpecific` with the nginx `use-regex` annotation
+added automatically. Override `ingress.grpc.path` with the exact path if your
+controller does not support regex Ingress paths. Either way a gRPC-capable
+controller is required.
 
 ## Non-HTTP traffic (no HTTP ingress)
 
@@ -122,7 +128,8 @@ metadata:
 spec:
   entryPoints: [websecure]
   routes:
-    - match: Host(`uem.example.com`) && PathPrefix(`/linxdeep.remote.proxy.v1.RemoteProxy`)
+    # PathRegexp keeps the matcher package-agnostic, like the chart default
+    - match: Host(`uem.example.com`) && PathRegexp(`^/[a-z]+\.remote\.proxy\.v1\.RemoteProxy(/|$)`)
       kind: Rule
       services:
         - name: remote-proxy

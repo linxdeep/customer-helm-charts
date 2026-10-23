@@ -122,6 +122,8 @@ ingress:
     enabled: false
   grpc:
     enabled: true
+    # the default path matcher (regex) already matches the gRPC service;
+    # only nginx needs the backend protocol annotation
     annotations:
       nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
 

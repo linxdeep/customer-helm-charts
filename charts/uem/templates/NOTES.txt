@@ -18,10 +18,12 @@
    https://{{ .Values.domain }}/sse/rcw,/wss/rcw     -> remote-proxy:80
 
    Remote control gRPC (must be routed separately, HTTP/2):
-   https://{{ .Values.domain }}/linxdeep.remote.proxy.v1.RemoteProxy
+   https://{{ .Values.domain }}/<package>.remote.proxy.v1.RemoteProxy
        -> remote-proxy:9099 (h2c)
-   Enable it with ingress.grpc.enabled=true (requires a gRPC-capable
-   controller) or configure it on your own controller.
+   Enable it with ingress.grpc.enabled=true. The generated Ingress matches
+   the service path with a regex (the nginx use-regex annotation is added
+   automatically); override ingress.grpc.path only on controllers without
+   regex path support, or configure the route on your own controller.
 
    MQTT (tcp {{ .Values.mqtt.tcpPort }} / tls {{ .Values.mqtt.sslPort }}) must be
    exposed directly to devices (LoadBalancer or NodePort), not through an HTTP

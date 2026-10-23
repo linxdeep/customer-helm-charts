@@ -1,9 +1,14 @@
-# Packages charts under charts/ and publishes them as a Helm repository on
-# GitHub Pages (https://linxdeep.github.io/customer-helm-charts/).
+# Packages the chart under charts/uem and pushes it as an OCI artifact to the
+# public AWS ECR registry public.ecr.aws/uem (repository "helm-charts").
 #
 # Release flow: bump `version` in charts/uem/Chart.yaml and push to main.
-# chart-releaser then creates a GitHub release `uem-<version>` with the .tgz
-# attached and redeploys index.yaml.
+# OCI tags are immutable, so every chart change needs a version bump; the
+# push is skipped when that version already exists in the registry.
+#
+# Authentication assumes an IAM role via GitHub OIDC (no stored secrets):
+# arn:aws:iam::068002804222:role/helm-charts. The role must trust
+# token.actions.githubusercontent.com for this repository and hold the
+# ecr-public push permissions. ecr-public is us-east-1 only.
 name: Release Chart
 
 on:
@@ -13,11 +18,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # create GitHub releases and push to the gh-pages branch
+  contents: read
+  id-token: write # assume the release role via GitHub OIDC
 
 concurrency:
   group: release-chart
   cancel-in-progress: false
+
+env:
+  REGISTRY: public.ecr.aws
+  REPOSITORY: helm-charts
+  ROLE_ARN: arn:aws:iam::068002804222:role/helm-charts
 
 jobs:
   release:
@@ -25,13 +36,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # chart-releaser diffs against previous releases
-
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
         uses: azure/setup-helm@v5
@@ -39,7 +43,38 @@ jobs:
       - name: Lint charts
         run: helm lint charts/*
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.7.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to the registry
+        run: |
+          aws ecr-public get-login-password --region us-east-1 \
+            | helm registry login -u AWS --password-stdin "$REGISTRY"
+
+      - name: Package chart
+        id: package
+        run: |
+          VERSION="$(sed -n 's/^version: *//p' charts/uem/Chart.yaml | head -n1)"
+          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
+          helm package charts/uem
+
+      - name: Check whether this version is already released
+        id: released
+        run: |
+          if aws ecr-public describe-images \
+              --repository-name "$REPOSITORY" \
+              --image-ids "imageTag=${{ steps.package.outputs.version }}" \
+              >/dev/null 2>&1; then
+            echo "exists=true" >>"$GITHUB_OUTPUT"
+            echo "::notice::${REGISTRY}/${REPOSITORY}:${{ steps.package.outputs.version }} is already released, skipping push"
+          else
+            echo "exists=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Push chart
+        if: steps.released.outputs.exists == 'false'
+        run: |
+          helm push "uem-${{ steps.package.outputs.version }}.tgz" "oci://${REGISTRY}/${REPOSITORY}"

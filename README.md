@@ -38,20 +38,18 @@ post-install `uemctl` job connects to all of it:
 
 ## Quick start
 
-Install from this Helm repository (served via GitHub Pages):
+Install from the OCI registry (public AWS ECR, no repository setup needed):
 
 ```bash
-helm repo add linxdeep https://linxdeep.github.io/customer-helm-charts/
-helm repo update
-
 # 1. Get the default values and fill in your environment
-helm show values linxdeep/uem > my-values.yaml
+helm show values oci://public.ecr.aws/uem/helm-charts > my-values.yaml
 
 # 2. Review mandatory settings (see the checklist below)
 vi my-values.yaml
 
-# 3. Install
-helm install uem linxdeep/uem -n uem --create-namespace -f my-values.yaml
+# 3. Install (pin the chart version you verified)
+helm install uem oci://public.ecr.aws/uem/helm-charts --version 6.7.0 \
+  -n uem --create-namespace -f my-values.yaml
 ```
 
 From a checkout of this repository, start from the tested example instead:
